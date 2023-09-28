@@ -1,0 +1,6491 @@
+{
+	"openapi": "3.0.2",
+	"info": {
+		"title": "CellEngine",
+		"version": "1.0"
+	},
+	"servers": [
+		{
+			"url": "https://cellengine.com/api/v1"
+		}
+	],
+	"components": {
+		"schemas": {
+			"Attachment": {
+				"type": "object",
+				"externalDocs": {
+					"description": "CellEngine API documentation for Attachments.",
+					"url": "https://docs.cellengine.com/api/#attachments"
+				},
+				"properties": {
+					"_id": {
+						"type": "string",
+						"description": "The unique ID of the attachment.",
+						"readOnly": true
+					},
+					"crc32c": {
+						"type": "string",
+						"description": "The CRC32c sum for the file, hex-encoded, per RFC 4960 Appendix B.",
+						"readOnly": true
+					},
+					"experimentId": {
+						"type": "string",
+						"description": "ID of the experiment to which the attachment belongs.",
+						"readOnly": true,
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"filename": {
+						"type": "string",
+						"description": "The name of the file."
+					},
+					"md5": {
+						"type": "string",
+						"description": "The MD5 sum for the file, hex-encoded.",
+						"readOnly": true
+					},
+					"size": {
+						"type": "integer",
+						"description": "The number of bytes in the file.",
+						"readOnly": true,
+						"minimum": 0
+					}
+				}
+			},
+			"Compensation": {
+				"type": "object",
+				"externalDocs": {
+					"description": "CellEngine API documentation for Compensations.",
+					"url": "https://docs.cellengine.com/api/#compensations"
+				},
+				"properties": {
+					"_id": {
+						"type": "string",
+						"description": "The unique ID of the compensation.",
+						"readOnly": true,
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"channels": {
+						"type": "array",
+						"description": "The names of the channels to which this compensation matrix applies.",
+						"items": {
+							"type": "string"
+						},
+						"maxItems": 500
+					},
+					"experimentId": {
+						"type": "string",
+						"description": "ID of the experiment to which the compensation belongs.",
+						"readOnly": true,
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"name": {
+						"type": "string",
+						"description": "The name of the compensation.",
+						"maxLength": 1024
+					},
+					"spillMatrix": {
+						"type": "array",
+						"description": "The row-wise, square spillover matrix. The length of the array must be the number of `channels` squared.",
+						"items": {
+							"type": "array",
+							"items": {
+								"type": "number"
+							}
+						},
+						"maxItems": 250000
+					}
+				}
+			},
+			"Experiment": {
+				"type": "object",
+				"externalDocs": {
+					"description": "CellEngine API documentation for Experiments.",
+					"url": "https://docs.cellengine.com/api/#experiments"
+				},
+				"properties": {
+					"_id": {
+						"type": "string",
+						"description": "The unique ID of the experiment.",
+						"readOnly": true
+					},
+					"absoluteCountParameters": {
+						"oneOf": [
+							{
+								"type": "object",
+								"properties": {
+									"type": {
+										"type": "string",
+										"enum": [
+											"concentration"
+										]
+									},
+									"beadPopulation": {
+										"type": "string",
+										"description": "The ID of the bead population.",
+										"pattern": "^[0-9a-f]{24}$"
+									},
+									"concentrationAnnotation": {
+										"type": "string",
+										"description": "The name of the annotation containing the bead concentration."
+									}
+								}
+							},
+							{
+								"type": "object",
+								"properties": {
+									"type": {
+										"type": "string",
+										"enum": [
+											"countAndVolume"
+										]
+									},
+									"beadPopulation": {
+										"type": "string",
+										"description": "The ID of the bead population.",
+										"pattern": "^[0-9a-f]{24}$"
+									},
+									"countAnnotation": {
+										"type": "string",
+										"description": "The name of the annotation containing the bead count."
+									},
+									"volumeAnnotation": {
+										"type": "string",
+										"description": "The name of the annotation containing the sample volume."
+									}
+								}
+							},
+							{
+								"type": "object",
+								"properties": {
+									"type": {
+										"type": "string",
+										"enum": [
+											"sampleVolume"
+										]
+									},
+									"volumeAnnotation": {
+										"type": "string",
+										"description": "The name of the annotation containing the sample volume."
+									},
+									"volumeUnit": {
+										"type": "string",
+										"description": "The units of the sample volume, if not present in the sample volume annotation itself.",
+										"enum": [
+											"ml",
+											"ul",
+											"nl"
+										]
+									}
+								}
+							}
+						],
+						"nullable": true
+					},
+					"activeCompensation": {
+						"oneOf": [
+							{
+								"type": "integer",
+								"enum": [
+									0,
+									-1,
+									-2
+								]
+							},
+							{
+								"type": "string",
+								"pattern": "^[0-9a-f]{24}$"
+							}
+						],
+						"nullable": true,
+						"description": "The most recently used compensation. Used to select the compensation in various parts of the Web interface. If this value is `null`, that means a compensation has not yet been explicitly selected in the UI and the \"used\" value is determined by the experiment state: If `perFileCompensationsEnabled` is `true`, then per-file compensation is used. If all files have a file-internal comp matrix, then file-internal is used. Otherwise, no compensation (uncompensated) is used."
+					},
+					"annotationNameOrder": {
+						"type": "array",
+						"description": "Order in which annotations appear in all tables in the Web interface.",
+						"items": {
+							"type": "string"
+						}
+					},
+					"annotationSources": {
+						"type": "object",
+						"description": "Sources of FCS file annotations, used to automatically annotate files on upload. The annotation names are provided as the property names in this object.",
+						"additionalProperties": {
+							"oneOf": [
+								{
+									"type": "object",
+									"properties": {
+										"source": {
+											"type": "string",
+											"enum": [
+												"filename"
+											]
+										},
+										"tokens": {
+											"type": "string",
+											"description": "The tokens (characters) used to split the filename."
+										},
+										"index": {
+											"type": "integer",
+											"description": "The index of the value to extract from the split filename."
+										}
+									}
+								},
+								{
+									"type": "object",
+									"properties": {
+										"source": {
+											"type": "string",
+											"enum": [
+												"header"
+											]
+										},
+										"key": {
+											"type": "string",
+											"description": "The keyword name."
+										}
+									}
+								}
+							],
+							"discriminator": {
+								"propertyName": "source",
+								"mapping": {
+									"filename": "#/components/schemas/Experiment/properties/annotationSources/items/oneOf/0",
+									"header": "#/components/schemas/Experiment/properties/annotationSources/items/oneOf/1"
+								}
+							}
+						}
+					},
+					"annotationTableSortColumns": {
+						"type": "array",
+						"items": {
+							"anyOf": [
+								{
+									"type": "string"
+								},
+								{
+									"type": "number"
+								}
+							]
+						},
+						"description": "The current sorting state for the annotation table."
+					},
+					"annotationTableColumnWidths": {
+						"type": "object",
+						"description": "The widths of the columns for all annotation tables in the Web UI.",
+						"additionalProperties": {
+							"type": "number"
+						}
+					},
+					"annotationTableColumnWraps": {
+						"type": "object",
+						"description": "Whether or not each annotation uses text wrapping in the annotation table.",
+						"additionalProperties": {
+							"type": "boolean"
+						}
+					},
+					"annotationValidators": {
+						"type": "object",
+						"description": "Validators that apply to FCS file annotations. The annotation names are provided as the property names in this object.",
+						"nullable": true,
+						"additionalProperties": {
+							"type": "object",
+							"properties": {
+								"enum": {
+									"type": "array",
+									"items": {
+										"type": "string"
+									},
+									"description": "String values allowed for the annotation."
+								},
+								"min": {
+									"type": "number",
+									"description": "Minimum allowed value, when interpreted as a number."
+								},
+								"max": {
+									"type": "number",
+									"description": "Maximum allowed value, when interpreted as a number."
+								},
+								"required": {
+									"type": "boolean",
+									"description": "Whether or not a value is required for the annotation."
+								}
+							}
+						}
+					},
+					"cloneSourceExperiment": {
+						"type": "string",
+						"readOnly": true,
+						"nullable": true,
+						"description": "Indicates the experiment from which this experiment was cloned, if applicable.",
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"analysisSourceExperiment": {
+						"type": "string",
+						"readOnly": true,
+						"nullable": true,
+						"description": "If this is a derived analysis, its source experiment.",
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"analysisTask": {
+						"type": "string",
+						"readOnly": true,
+						"nullable": true,
+						"description": "If this is a derived analysis, the analysis task that created it.",
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"comments": {
+						"type": "array",
+						"description": "Comments about the experiment.",
+						"items": {
+							"type": "object",
+							"properties": {
+								"insert": {
+									"type": "string"
+								},
+								"attributes": {
+									"type": "object",
+									"properties": {
+										"bold": {
+											"type": "boolean"
+										},
+										"italic": {
+											"type": "boolean"
+										},
+										"underline": {
+											"type": "boolean"
+										}
+									}
+								}
+							}
+						}
+					},
+					"created": {
+						"type": "string",
+						"format": "date-time",
+						"readOnly": true,
+						"description": "The creation time of the experiment."
+					},
+					"deleted": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true,
+						"description": "The time when the experiment was moved to the trash. Experiments are permanently deleted approximately seven days after this time. Cannot be set on revision experiments, experiments that are locked or experiments with an active retention policy."
+					},
+					"data": {
+						"type": "object",
+						"description": "May contain auxiliary information about the experiment, such as where it was imported from."
+					},
+					"dataOrder": {
+						"type": "array",
+						"items": {
+							"type": "string",
+							"description": "Display order of the keys in `data`."
+						}
+					},
+					"deepUpdated": {
+						"type": "string",
+						"format": "date-time",
+						"readOnly": true,
+						"description": "The last time that the experiment or any of its descendant resources (e.g. gates, scales) were modified. This property is eventually consistent; its value may not be updated instantaneously after a descendant resource is modified."
+					},
+					"locked": {
+						"type": "boolean",
+						"readOnly": true,
+						"description": "Whether or not the experiment is locked and cannot be modified. Locking an experiment locks all descendant resources as well, including gates and populations. Currently only `true` for revision experiments."
+					},
+					"name": {
+						"type": "string",
+						"minLength": 1,
+						"maxLength": 1024,
+						"description": "The name of the experiment."
+					},
+					"palettes": {
+						"type": "object",
+						"description": "The color palettes for the experiment.",
+						"additionalProperties": {
+							"type": "array",
+							"items": {
+								"type": "string",
+								"pattern": "^#[0-9A-Fa-f]{6}$"
+							}
+						}
+					},
+					"path": {
+						"type": "array",
+						"items": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						},
+						"description": "The experiment's path. Each entry is the ID of an ancestor folder, in hierarchical order. A root-level experiment has a `path` of `[]`."
+					},
+					"perFileCompensationsEnabled": {
+						"type": "boolean",
+						"description": "If per-file compensations are enabled for the experiment."
+					},
+					"permissions": {
+						"type": "object",
+						"readOnly": true,
+						"description": "List of permissions for the experiment. Only modifiable via the sharing API.",
+						"properties": {
+							"grantDate": {
+								"type": "string",
+								"format": "date-time",
+								"description": "When the permission was granted."
+							},
+							"grantor": {
+								"type": "string",
+								"description": "ID of user who granted the permission. In some responses, this property is an object with basic information about the user.",
+								"pattern": "^[0-9a-f]{24}$"
+							},
+							"grantee": {
+								"type": "string",
+								"description": "ID of user to whom the permission was granted. In some responses, this property is an object with basic information about the user.",
+								"pattern": "^[0-9a-f]{24}$"
+							},
+							"role": {
+								"type": "string",
+								"description": "The role that the grantee has.",
+								"pattern": "^[0-9a-f]{24}$"
+							}
+						}
+					},
+					"primaryResearcher": {
+						"type": "string",
+						"description": "The user who is the primary researcher assigned to the experiment. Only modifiable by the `primaryResearcher`. In some responses, this property is an object with basic information about the user.",
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"retentionPolicy": {
+						"type": "object",
+						"description": "The retention policy for the experiment.",
+						"properties": {
+							"retainUntil": {
+								"type": "string",
+								"format": "date-time",
+								"description": "A date until when this experiment cannot be deleted. (This date may be in the past if the retention policy has expired.) Note: retention policies may only be extended."
+							},
+							"history": {
+								"type": "array",
+								"description": "History of all changes to the experiment's retention policy.",
+								"items": {
+									"type": "object",
+									"properties": {
+										"user": {
+											"type": "string",
+											"description": "ID of user who set the retention policy. In some responses, this property is an object with basic information about the user.",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										"retainUntil": {
+											"type": "string",
+											"format": "date-time",
+											"description": "Date that the retention policy was set to."
+										},
+										"timestamp": {
+											"type": "string",
+											"format": "date-time",
+											"description": "When Date when the retention policy was changed."
+										}
+									}
+								}
+							}
+						}
+					},
+					"revisions": {
+						"type": "array",
+						"description": "List of revisions of the experiment.",
+						"readOnly": true,
+						"items": {
+							"type": "object",
+							"properties": {
+								"_id": {
+									"type": "string",
+									"description": "ID of the revision experiment.",
+									"pattern": "^[0-9a-f]{24}$"
+								},
+								"creator": {
+									"type": "string",
+									"description": "User who created the revision.",
+									"pattern": "^[0-9a-f]{24}$"
+								},
+								"timestamp": {
+									"type": "string",
+									"format": "date-time",
+									"description": "Timestamp when the revision was created."
+								},
+								"comments": {
+									"type": "string",
+									"maxLength": 1024,
+									"description": "Comments about the revision, such as why it was saved."
+								}
+							}
+						}
+					},
+					"revisionSourceExperiment": {
+						"type": "string",
+						"nullable": true,
+						"readOnly": true,
+						"description": "Indicates the experiment of which this experiment is a revision, if applicable.",
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"savedStatisticsExports": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"format": {
+									"type": "string",
+									"enum": [
+										"JSON",
+										"TSV (with header)",
+										"TSV (without header)",
+										"CSV (with header)",
+										"CSV (without header)"
+									]
+								},
+								"layout": {
+									"type": "string",
+									"enum": [
+										"tall-skinny",
+										"medium",
+										"short-wide"
+									]
+								},
+								"q": {
+									"type": "number",
+									"minimum": 0,
+									"maximum": 1
+								},
+								"compensationId": {
+									"oneOf": [
+										{
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										{
+											"type": "integer",
+											"enum": [
+												0,
+												-1,
+												-2
+											]
+										}
+									]
+								},
+								"populations": {
+									"type": "array",
+									"items": {
+										"type": "string",
+										"pattern": "^[0-9a-f]{24}$"
+									}
+								},
+								"percentOf": {
+									"type": "array",
+									"items": {
+										"type": "string"
+									}
+								},
+								"fcsFiles": {
+									"type": "array",
+									"items": {
+										"type": "string",
+										"pattern": "^[0-9a-f]{24}$"
+									}
+								},
+								"channels": {
+									"type": "array",
+									"items": {
+										"type": "string"
+									}
+								},
+								"statistics": {
+									"type": "array",
+									"items": {
+										"type": "string"
+									}
+								},
+								"digits": {
+									"type": "number"
+								},
+								"ids": {
+									"type": "boolean"
+								}
+							}
+						}
+					},
+					"sortingSpec": {
+						"type": "object",
+						"description": "Describes the way annotations, populations and channels are sorted. Properties of this object are the thing being sorted, and the values are the sort order.",
+						"additionalProperties": {
+							"type": "array",
+							"items": {
+								"type": "string",
+								"nullable": true
+							}
+						}
+					},
+					"colorSpec": {
+						"description": "Describes what colors are assigned to populations, files, channels and/or annotations. Must be of the form `Array<[string, Array<[string | null, number]>]>`.",
+						"type": "array",
+						"items": {
+							"type": "array",
+							"items": {
+								"oneOf": [
+									{
+										"type": "string"
+									},
+									{
+										"type": "array",
+										"items": {
+											"oneOf": [
+												{
+													"type": "string",
+													"nullable": true
+												},
+												{
+													"type": "integer"
+												}
+											]
+										},
+										"minLength": 2,
+										"maxLength": 2
+									}
+								]
+							},
+							"minLength": 2,
+							"maxLength": 2
+						}
+					},
+					"tags": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "List of tags for the experiment."
+					},
+					"updated": {
+						"type": "string",
+						"format": "date-time",
+						"readOnly": true,
+						"description": "The last time that the experiment was modified. This value is a shallow timestamp; it is not updated when descendant resources such as gates are modified. (See `deepUpdated`.)"
+					},
+					"uploader": {
+						"type": "string",
+						"readOnly": true,
+						"description": "The user who created the experiment. In some responses, this property is an object with basic information about the user.",
+						"pattern": "^[0-9a-f]{24}$"
+					}
+				}
+			},
+			"FcsFile": {
+				"type": "object",
+				"externalDocs": {
+					"description": "CellEngine API documentation for FCS Files.",
+					"url": "https://docs.cellengine.com/api/#fcs-files"
+				},
+				"properties": {
+					"_id": {
+						"type": "string",
+						"description": "The unique ID of the file.",
+						"readOnly": true,
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"annotations": {
+						"type": "array",
+						"description": "Metadata about the file.",
+						"items": {
+							"type": "object",
+							"properties": {
+								"name": {
+									"type": "string",
+									"description": "Name of the annotation (i.e. the key).",
+									"example": "Donor ID"
+								},
+								"value": {
+									"type": "string",
+									"description": "Value of the annotation.",
+									"example": "W6892A"
+								}
+							}
+						}
+					},
+					"compensation": {
+						"oneOf": [
+							{"type": "string", "pattern": "^[0-9a-f]{24}$"},
+							{"type": "integer", "enum": [0, -1]}
+						],
+						"nullable": true,
+						"description": "Used with per-file compensation to indicate the compensation to apply to this file."
+					},
+					"crc32c": {
+						"type": "string",
+						"description": "The CRC32c sum for the file, hex-encoded, per RFC 4960 Appendix B.",
+						"readOnly": true
+					},
+					"deleted": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true,
+						"description": "If set, the file has been soft-deleted and may be permanently deleted later."
+					},
+					"eventCount": {
+						"type": "integer",
+						"description": "The number of events (rows) in the file.",
+						"readOnly": true
+					},
+					"experimentId": {
+						"type": "string",
+						"description": "ID of the experiment to which the file belongs.",
+						"pattern": "^[0-9a-f]{24}$",
+						"readOnly": true
+					},
+					"filename": {
+						"type": "string",
+						"description": "The filename.",
+						"example": "Specimen_1.fcs"
+					},
+					"gatesLocked": {
+						"type": "boolean",
+						"description": "If true, no gates that apply to this file can be changed."
+					},
+					"hasFileInternalComp": {
+						"type": "boolean",
+						"description": "Whether or not this file has a valid file-internal compensation matrix.",
+						"readOnly": true
+					},
+					"header": {
+						"type": "string",
+						"description": "The file header stored as a JSON string.",
+						"readOnly": true
+					},
+					"isControl": {
+						"type": "boolean",
+						"description": "Whether or not this is a control file. Control files are hidden from most of the Web UI, and can be used to exclude compensation or calibration beads from analysis, for example."
+					},
+					"md5": {
+						"type": "string",
+						"description": "The MD5 sum for the file, hex-encoded.",
+						"readOnly": true
+					},
+					"panel": {
+						"type": "array",
+						"description": "The file's panel.",
+						"items": {
+							"type": "object",
+							"properties": {
+								"channel": {
+									"type": "string",
+									"description": "The channel name.",
+									"example": "Ax488-A"
+								},
+								"reagent": {
+									"type": "string",
+									"description": "The reagent for the channel.",
+									"example": "CD3"
+								},
+								"index": {
+									"type": "integer",
+									"description": "The 1-based index of the channel in the file.",
+									"minimum": 1
+								}
+							}
+						}
+					},
+					"panelName": {
+						"type": "string",
+						"description": "The name of the file's panel. Files with the same `panelName` are grouped into a panel."
+					},
+					"sampleName": {
+						"type": "string",
+						"description": "The sample name extracted from the file header.",
+						"readOnly": true
+					},
+					"size": {
+						"type": "integer",
+						"description": "The number of bytes in the file.",
+						"readOnly": true
+					},
+					"spillString": {
+						"type": "string",
+						"description": "The file-internal compensation, if present.",
+						"readOnly": true
+					}
+				}
+			},
+			"Folder": {
+				"type": "object",
+				"externalDocs": {
+					"description": "CellEngine API documentation for Folders.",
+					"url": "https://docs.cellengine.com/api/#folders"
+				},
+				"properties": {
+					"_id": {
+						"type": "string",
+						"description": "The unique ID of the folder.",
+						"readOnly": true,
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"name": {
+						"type": "string",
+						"description": "The name of the folder."
+					},
+					"created": {
+						"type": "string",
+						"format": "date-time",
+						"readOnly": true,
+						"description": "When the folder was created."
+					},
+					"creator": {
+						"type": "string",
+						"readOnly": true,
+						"description": "The user who created the folder. In some responses, this property is an object with basic information about the user.",
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"deleted": {
+						"type": "string",
+						"format": "date-time",
+						"nullable": true,
+						"description": "The time when the folder was moved to the trash. Folders are permanently deleted approximately seven days after this time."
+					},
+					"path": {
+						"type": "array",
+						"items": {
+							"type": "string"
+						},
+						"description": "The folder's path. Each entry is the ID of an ancestor folder, in hierarchical order. A root-level folder has a `path` of `[]`."
+					},
+					"permissions": {
+						"type": "array",
+						"readOnly": true,
+						"description": "List of permissions for the folder. Only modifiable via the sharing API.",
+						"items": {
+							"type": "object",
+							"properties": {
+								"grantDate": {
+									"type": "string",
+									"format": "date-time",
+									"description": "When the permission was granted."
+								},
+								"grantor": {
+									"type": "string",
+									"description": "User who granted the permission. In some responses, this property is an object with basic information about the user.",
+									"pattern": "^[0-9a-f]{24}$"
+								},
+								"grantee": {
+									"type": "string",
+									"description": "User to whom the permission was granted. In some responses, this property is an object with basic information about the user.",
+									"pattern": "^[0-9a-f]{24}$"
+								},
+								"role": {
+									"type": "string",
+									"description": "The role that the grantee has.",
+									"pattern": "^[0-9a-f]{24}$"
+								}
+							}
+						}
+					}
+				}
+			},
+			"BaseGate": {
+				"type": "object",
+				"externalDocs": {
+					"description": "CellEngine API documentation for Gates.",
+					"url": "https://docs.cellengine.com/api/#gates"
+				},
+				"discriminator": {
+					"propertyName": "type"
+				},
+				"properties": {
+					"_id": {
+						"type": "string",
+						"description": "The unique ID of the gate.",
+						"readOnly": true,
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"experimentId": {
+						"type": "string",
+						"description": "ID of the experiment to which the gate belongs.",
+						"readOnly": true,
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"fcsFileId": {
+						"type": "string",
+						"description": "If `tailoredPerFile=true`, the ID of the FCS file to which this gate is tailored. If blank, this is the default gate that will be used when there is no gate with the required `GID` and `fcsFileId`.",
+						"nullable": true,
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"gid": {
+						"type": "string",
+						"description": "The gate \"group ID.\" Families of tailored gates all use the same `GID`, but have unique `_id` and `fcsFileId` values.",
+						"pattern": "^[0-9a-f]{24}$",
+						"readOnly": true
+					},
+					"xChannel": {
+						"type": "string",
+						"description": "The name of the X channel."
+					},
+					"tailoredPerFile": {
+						"type": "boolean",
+						"description": "If true, indicates that gates with this `GID` are tailored per-file."
+					},
+					"type": {
+						"type": "string",
+						"description": "The type of the gate.",
+						"enum": [
+							"RectangleGate",
+							"PolygonGate",
+							"EllipseGate",
+							"RangeGate",
+							"QuadrantGate",
+							"SplitGate"
+						],
+						"readOnly": true
+					}
+				}
+			},
+			"RectangleGate": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/BaseGate"
+					},
+					{
+						"type": "object",
+						"properties": {
+							"yChannel": {
+								"type": "string",
+								"description": "The name of the Y channel."
+							},
+							"model": {
+								"type": "object",
+								"properties": {
+									"rectangle": {
+										"type": "object",
+										"properties": {
+											"x1": {
+												"type": "number"
+											},
+											"y1": {
+												"type": "number"
+											},
+											"x2": {
+												"type": "number"
+											},
+											"y2": {
+												"type": "number"
+											}
+										}
+									},
+									"label": {
+										"type": "array",
+										"minLength": 2,
+										"maxLength": 2,
+										"items": {
+											"type": "number"
+										},
+										"description": "X, Y coordinate of the gate label."
+									},
+									"locked": {
+										"type": "boolean",
+										"description": "If true, the gate cannot be moved in the Web UI."
+									}
+								}
+							},
+							"name": {
+								"type": "string",
+								"description": "Name of the gate."
+							}
+						}
+					}
+				]
+			},
+			"PolygonGate": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/BaseGate"
+					},
+					{
+						"type": "object",
+						"properties": {
+							"yChannel": {
+								"type": "string",
+								"description": "The name of the Y channel."
+							},
+							"model": {
+								"type": "object",
+								"properties": {
+									"polygon": {
+										"type": "object",
+										"properties": {
+											"vertices": {
+												"type": "array",
+												"minLength": 3,
+												"maxLength": 300,
+												"items": {
+													"type": "array",
+													"minLength": 2,
+													"maxLength": 2,
+													"items": {
+														"type": "number"
+													}
+												}
+											}
+										}
+									},
+									"label": {
+										"type": "array",
+										"minLength": 2,
+										"maxLength": 2,
+										"items": {
+											"type": "number"
+										},
+										"description": "X, Y coordinate of the gate label."
+									},
+									"locked": {
+										"type": "boolean",
+										"description": "If true, the gate cannot be moved in the Web UI."
+									}
+								}
+							},
+							"name": {
+								"type": "string",
+								"description": "Name of the gate."
+							}
+						}
+					}
+				]
+			},
+			"EllipseGate": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/BaseGate"
+					},
+					{
+						"type": "object",
+						"properties": {
+							"yChannel": {
+								"type": "string",
+								"description": "The name of the Y channel."
+							},
+							"model": {
+								"type": "object",
+								"properties": {
+									"ellipse": {
+										"type": "object",
+										"properties": {
+											"center": {
+												"type": "number",
+												"description": "X, Y coordinate of the ellipse center point."
+											},
+											"major": {
+												"type": "number",
+												"description": "Length of the semi-major axis.",
+												"minimum": 0,
+												"exclusiveMinimum": true
+											},
+											"minor": {
+												"type": "number",
+												"description": "Length of the semi-minor axis. (Note that this may be larger than the `major` value.)",
+												"minimum": 0,
+												"exclusiveMinimum": true
+											},
+											"angle": {
+												"type": "number",
+												"description": "Rotation of the ellipse."
+											}
+										}
+									},
+									"label": {
+										"type": "array",
+										"minLength": 2,
+										"maxLength": 2,
+										"items": {
+											"type": "number"
+										},
+										"description": "X, Y coordinate of the gate label."
+									},
+									"locked": {
+										"type": "boolean",
+										"description": "If true, the gate cannot be moved in the Web UI."
+									}
+								}
+							},
+							"name": {
+								"type": "string",
+								"description": "Name of the gate."
+							}
+						}
+					}
+				]
+			},
+			"QuadrantGate": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/BaseGate"
+					},
+					{
+						"type": "object",
+						"properties": {
+							"yChannel": {
+								"type": "string",
+								"description": "The name of the Y channel."
+							},
+							"model": {
+								"type": "object",
+								"properties": {
+									"quadrant": {
+										"type": "object",
+										"properties": {
+											"x": {
+												"type": "number",
+												"description": "Position of the center point."
+											},
+											"y": {
+												"type": "number",
+												"description": "Position of the center point."
+											},
+											"angles": {
+												"type": "array",
+												"minLength": 4,
+												"maxLength": 4,
+												"items": {
+													"type": "number"
+												},
+												"description": "Angles at which the quadrant lines appear, in radians. Zero (0) points horizontally to the right; angles proceed counter-clockwise."
+											}
+										}
+									},
+									"labels": {
+										"type": "array",
+										"minLength": 4,
+										"maxLength": 4,
+										"items": {
+											"type": "array",
+											"minLength": 2,
+											"maxLength": 2,
+											"items": {
+												"type": "number"
+											}
+										},
+										"description": "X, Y coordinate of the gate labels."
+									},
+									"locked": {
+										"type": "boolean",
+										"description": "If true, the gate cannot be moved in the Web UI."
+									},
+									"names": {
+										"type": "array",
+										"minLength": 4,
+										"maxLength": 4,
+										"items": {
+											"type": "string"
+										},
+										"description": "Names of the sectors."
+									},
+									"gids": {
+										"type": "array",
+										"minLength": 4,
+										"maxLength": 4,
+										"items": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										"description": "GIDs of the sectors."
+									}
+								}
+							}
+						}
+					}
+				]
+			},
+			"RangeGate": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/BaseGate"
+					},
+					{
+						"type": "object",
+						"properties": {
+							"model": {
+								"type": "object",
+								"properties": {
+									"range": {
+										"type": "object",
+										"properties": {
+											"x1": {
+												"type": "number",
+												"description": "Position of the first vertical line."
+											},
+											"x2": {
+												"type": "number",
+												"description": "Position of the second vertical line."
+											},
+											"y": {
+												"type": "number",
+												"description": "Vertical position of the dashed line joining the vertical lines."
+											}
+										}
+									},
+									"label": {
+										"type": "array",
+										"minLength": 2,
+										"maxLength": 2,
+										"items": {
+											"type": "number"
+										},
+										"description": "X, Y coordinate of the gate label."
+									},
+									"locked": {
+										"type": "boolean",
+										"description": "If true, the gate cannot be moved in the Web UI."
+									}
+								}
+							}
+						}
+					}
+				]
+			},
+			"SplitGate": {
+				"allOf": [
+					{
+						"$ref": "#/components/schemas/BaseGate"
+					},
+					{
+						"type": "object",
+						"properties": {
+							"model": {
+								"type": "object",
+								"properties": {
+									"split": {
+										"type": "object",
+										"properties": {
+											"x": {
+												"type": "number",
+												"description": "Position of the center point."
+											},
+											"y": {
+												"type": "number",
+												"description": "Vertical position of the dashed line extending from the vertical line."
+											}
+										}
+									},
+									"labels": {
+										"type": "array",
+										"minLength": 2,
+										"maxLength": 2,
+										"items": {
+											"type": "array",
+											"minLength": 2,
+											"maxLength": 2,
+											"items": {
+												"type": "number"
+											}
+										},
+										"description": "X, Y coordinate of the gate labels."
+									},
+									"locked": {
+										"type": "boolean",
+										"description": "If true, the gate cannot be moved in the Web UI."
+									},
+									"names": {
+										"type": "array",
+										"minLength": 2,
+										"maxLength": 2,
+										"items": {
+											"type": "string"
+										},
+										"description": "Names of the sectors."
+									},
+									"gids": {
+										"type": "array",
+										"minLength": 2,
+										"maxLength": 2,
+										"items": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										"description": "GIDs of the sectors."
+									}
+								}
+							}
+						}
+					}
+				]
+			},
+			"Gate": {
+				"type": "object",
+				"anyOf": [
+					{
+						"$ref": "#/components/schemas/RectangleGate"
+					},
+					{
+						"$ref": "#/components/schemas/PolygonGate"
+					},
+					{
+						"$ref": "#/components/schemas/EllipseGate"
+					},
+					{
+						"$ref": "#/components/schemas/QuadrantGate"
+					},
+					{
+						"$ref": "#/components/schemas/RangeGate"
+					},
+					{
+						"$ref": "#/components/schemas/SplitGate"
+					}
+				]
+			},
+			"Population": {
+				"type": "object",
+				"externalDocs": {
+					"description": "CellEngine API documentation for Populations.",
+					"url": "https://docs.cellengine.com/api/#populations"
+				},
+				"properties": {
+					"_id": {
+						"type": "string",
+						"description": "The unique ID of the population.",
+						"readOnly": true,
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"experimentId": {
+						"type": "string",
+						"description": "ID of the experiment to which the population belongs.",
+						"readOnly": true,
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"gates": {
+						"type": "string",
+						"description": "The gate expression that defines this population. See API documentation. This string must be RFC8259-compliant JSON."
+					},
+					"name": {
+						"type": "string",
+						"description": "The name of the population."
+					},
+					"parentId": {
+						"type": "string",
+						"description": "The population's parent population.",
+						"pattern": "^[0-9a-f]{24}$",
+						"nullable": true
+					},
+					"terminalGateGid": {
+						"type": "string",
+						"description": "The GID of the gate that differentiates this population from its parent. This is used in conjunction with `parentId` to determine if a gate should be displayed on a plot. For basic populations, it should be the GID of the gate that differentiates this population from the parent. For complex populations (e.g. combination populations) with more than one gate that is different from the parent, it should be `null`. Note: for compound gates, this property should correspond to the sector GID found at `gate.model.gids[#]`, not the top-level GID.",
+						"pattern": "^[0-9a-f]{24}$",
+						"nullable": true
+					},
+					"uniqueName": {
+						"type": "string",
+						"readOnly": true,
+						"description": "The unique name of the population, automatically generated by the server. This name includes prepended ancestor names until the name is unique within the experiment."
+					}
+				}
+			},
+			"ScaleSet": {
+				"type": "object",
+				"externalDocs": {
+					"description": "CellEngine API documentation for ScaleSets.",
+					"url": "https://docs.cellengine.com/api/#scalesets"
+				},
+				"properties": {
+					"_id": {
+						"type": "string",
+						"description": "The unique ID of the scale set.",
+						"readOnly": true,
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"experimentId": {
+						"type": "string",
+						"description": "ID of the experiment to which the scale set belongs.",
+						"readOnly": true,
+						"pattern": "^[0-9a-f]{24}$"
+					},
+					"name": {
+						"type": "string",
+						"description": "The name of the scale set."
+					},
+					"scales": {
+						"type": "array",
+						"description": "The scales comprising the scale set.",
+						"items": {
+							"type": "object",
+							"properties": {
+								"channelName": {
+									"type": "string",
+									"description": "The name of the channel to which this scale applies."
+								},
+								"scale": {
+									"type": "object",
+									"description": "The scale for this channel.",
+									"oneOf": [
+										{
+											"type": "object",
+											"properties": {
+												"type": {
+													"type": "string",
+													"enum": [
+														"LinearScale"
+													]
+												},
+												"minimum": {
+													"type": "number",
+													"description": "The minimum display value for the scale."
+												},
+												"maximum": {
+													"type": "number",
+													"description": "The maximum display value for the scale."
+												}
+											}
+										},
+										{
+											"type": "object",
+											"properties": {
+												"type": {
+													"type": "string",
+													"enum": [
+														"LogScale"
+													]
+												},
+												"minimum": {
+													"type": "number",
+													"description": "The minimum display value for the scale.",
+													"minimum": 0,
+													"exclusiveMinimum": true
+												},
+												"maximum": {
+													"type": "number",
+													"description": "The maximum display value for the scale.",
+													"minimum": 0,
+													"exclusiveMinimum": true
+												}
+											}
+										},
+										{
+											"type": "object",
+											"properties": {
+												"type": {
+													"type": "string",
+													"enum": [
+														"ArcSinhScale"
+													]
+												},
+												"minimum": {
+													"type": "number",
+													"description": "The minimum display value for the scale."
+												},
+												"maximum": {
+													"type": "number",
+													"description": "The maximum display value for the scale."
+												},
+												"cofactor": {
+													"type": "number",
+													"description": "The value by which the input is divided.",
+													"minimum": 0,
+													"exclusiveMinimum": true
+												}
+											}
+										}
+									]
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"parameters": {
+			"limit": {
+				"name": "limit",
+				"description": "Maximum number of results to return.",
+				"in": "query",
+				"schema": {
+					"type": "integer",
+					"minimum": 0,
+					"externalDocs": {
+						"description": "CellEngine API documentation for standard query parameters.",
+						"url": "https://docs.cellengine.com/api/#standard-query-parameters-for-list-routes"
+					}
+				}
+			},
+			"skip": {
+				"name": "skip",
+				"description": "Number of results to skip (e.g. an offset).",
+				"in": "query",
+				"schema": {
+					"type": "integer",
+					"minimum": 0,
+					"externalDocs": {
+						"description": "CellEngine API documentation for standard query parameters.",
+						"url": "https://docs.cellengine.com/api/#standard-query-parameters-for-list-routes"
+					}
+				}
+			},
+			"fields": {
+				"name": "fields",
+				"description": "Fields to return (exclusively) or omit (from default set), in the format `-fieldName` (omit) or `+fieldName` (include).",
+				"in": "query",
+				"schema": {
+					"type": "array",
+					"items": {
+						"type": "string",
+						"pattern": "[+-].+"
+					},
+					"externalDocs": {
+						"description": "CellEngine API documentation for standard query parameters.",
+						"url": "https://docs.cellengine.com/api/#standard-query-parameters-for-list-routes"
+					}
+				}
+			},
+			"query": {
+				"name": "query",
+				"in": "query",
+				"schema": {
+					"type": "string",
+					"externalDocs": {
+						"description": "CellEngine API documentation for standard query parameters.",
+						"url": "https://docs.cellengine.com/api/#standard-query-parameters-for-list-routes"
+					}
+				}
+			}
+		},
+		"securitySchemes": {
+			"personal_access_token": {
+				"type": "http",
+				"scheme": "bearer"
+			}
+		}
+	},
+	"paths": {
+		"/experiments": {
+			"get": {
+				"operationId": "experiments_list",
+				"summary": "List experiments",
+				"description": "List experiments accessible to the requesting user (i.e. ones for which the user has the `\"experiment.read\"` permission).",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/limit"
+					},
+					{
+						"$ref": "#/components/parameters/skip"
+					},
+					{
+						"$ref": "#/components/parameters/fields"
+					},
+					{
+						"$ref": "#/components/parameters/query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "List of experiments.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/Experiment"
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"operationId": "experiments_create",
+				"summary": "Create an experiment",
+				"description": "Create an experiment. Creating an experiment also creates a blank ScaleSet for the experiment.",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"description": "Name of experiment. Defaults to \"Untitled Experiment\"."
+									},
+									"comments": {
+										"type": "array",
+										"description": "Comments about the experiment.",
+										"items": {
+											"type": "object",
+											"properties": {
+												"insert": {
+													"type": "string"
+												},
+												"attributes": {
+													"type": "object",
+													"properties": {
+														"bold": {
+															"type": "boolean"
+														},
+														"italic": {
+															"type": "boolean"
+														},
+														"underline": {
+															"type": "boolean"
+														}
+													}
+												}
+											}
+										}
+									},
+									"uploader": {
+										"type": "string",
+										"description": "Defaults to user making request."
+									},
+									"path": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "The experiment's path. Each entry is the ID of an ancestor folder, in hierarchical order. A root-level experiment has a `path` of `[]`."
+									},
+									"primaryResearcher": {
+										"type": "string",
+										"description": "Defaults to user making request."
+									},
+									"tags": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "List of tags for the experiment."
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Experiment created successfully.",
+						"headers": {
+							"Location": {
+								"description": "URI of created experiment.",
+								"schema": {
+									"type": "string"
+								}
+							}
+						},
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Experiment"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}": {
+			"get": {
+				"operationId": "experiments_read",
+				"summary": "Get an experiment by ID",
+				"description": "Gets an experiment.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Experiment details.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Experiment"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "experiments_delete",
+				"summary": "Soft-delete experiment",
+				"description": "Marks the experiment for deletion. It will be deleted permanently after approximately seven days.\n\nRevision experiments, locked experiments and experiments with an active `retentionPolicy` cannot be deleted.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Experiment successfully deleted."
+					}
+				}
+			},
+			"patch": {
+				"operationId": "experiments_update",
+				"summary": "Update an experiment",
+				"description": "Updates an experiment.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/Experiment"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Updated experiment.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Experiment"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/clone": {
+			"post": {
+				"operationId": "experiments_clone",
+				"summary": "Deeply copy an experiment",
+				"description": "Cloning an experiment saves a deep copy of the experiment and all of its resources, including attachments, FCS files, gates and populations.\n\nCloned experiments do not count toward your account's resource usage.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"201": {
+						"description": "Experiment copied successfully.",
+						"headers": {
+							"Location": {
+								"description": "URI of clone.",
+								"schema": {
+									"type": "string"
+								}
+							}
+						},
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Experiment"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/audittrail": {
+			"get": {
+				"operationId": "experiments_audittrail",
+				"summary": "Get experiment audit trail",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}/testpermissions": {
+			"post": {
+				"operationId": "experiments_testpermissions",
+				"summary": "Test experiment permissions",
+				"description": "Checks which of the requested permissions the current user has on the experiment, taking into account directly granted roles and inherited roles.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"permissions": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "List of permissions the user has.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/revision": {
+			"post": {
+				"operationId": "experiments_create_revision",
+				"summary": "Create revision of experiment",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}/changepermissions": {
+			"post": {
+				"operationId": "experiments_changepermissions",
+				"summary": "Change experiment permissions",
+				"description": "Changes the permissions of the experiment.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"add": {
+										"type": "array",
+										"items": {
+											"type": "object",
+											"properties": {
+												"grantee": {
+													"type": "string",
+													"pattern": "^[0-9a-f]{24}$"
+												},
+												"role": {
+													"type": "string",
+													"pattern": "^[0-9a-f]{24}$"
+												}
+											}
+										}
+									},
+									"remove": {
+										"type": "array",
+										"items": {
+											"type": "object",
+											"properties": {
+												"grantee": {
+													"type": "string",
+													"pattern": "^[0-9a-f]{24}$"
+												},
+												"role": {
+													"type": "string",
+													"pattern": "^[0-9a-f]{24}$"
+												}
+											}
+										}
+									},
+									"message": {
+										"type": "string",
+										"description": "Message to include in the notification email sent to all users appearing as grantees in `add`."
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Experiment description after update.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Experiment"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/import/diva": {
+			"post": {
+				"operationId": "experiments_import_diva",
+				"summary": "Import DiVa workspace",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}/importResources": {
+			"post": {
+				"operationId": "experiments_import_resources",
+				"summary": "Import gates, populations, scales, compensations and/or illustrations from another experiment",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}/populationsToNew": {
+			"post": {
+				"operationId": "experiments_populations_to_new",
+				"summary": "Export populations to new experiment",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}.gatingml": {
+			"get": {
+				"operationId": "experiments_export_gatingml",
+				"summary": "Export Gating-ML",
+				"description": "Generates a Gating-ML 2.0 XML file containing the experiment's compensation matrices, gates, populations and scales.\n\nPlease see the [documentation for exporting Gating-ML](https://docs.cellengine.com/experiments/#exporting-gating-ml) for a list of limitations of the Gating-ML specification and workarounds.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "fcsFileId",
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						},
+						"in": "query",
+						"description": "If provided, the Gating-ML file will contain this FCS file's tailored gates (in addition to any non-tailored gates). If omitted, the file will contain the global gates."
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Gating-ML file.",
+						"content": {
+							"application/vnd.isac.gating-ml+xml": {
+								"schema": {
+									"type": "string",
+									"format": "binary"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}.json": {
+			"get": {
+				"operationId": "experiments_export_json",
+				"summary": "Export JSON of experiment",
+				"description": "Generates a JSON file containing all of the resources in the experiment.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					},
+					{
+						"name": "fcsFileId",
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						},
+						"in": "query",
+						"description": "If provided, the Gating-ML file will contain this FCS file's tailored gates (in addition to any non-tailored gates). If omitted, the file will contain the global gates."
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "JSON file.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"experiment": {
+											"$ref": "#/components/schemas/Experiment"
+										},
+										"attachments": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Attachment"
+											}
+										},
+										"compensations": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Compensation"
+											}
+										},
+										"populations": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Population"
+											}
+										},
+										"gates": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Gate"
+											}
+										},
+										"scaleSets": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/ScaleSet"
+											}
+										},
+										"fcsFiles": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/FcsFile"
+											}
+										},
+										"illustrations": {
+											"type": "array",
+											"items": {
+												"type": "object"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/attachments": {
+			"get": {
+				"operationId": "attachments_list",
+				"summary": "List attachments in an experiment",
+				"description": "Lists attachments in the experiment.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"$ref": "#/components/parameters/limit"
+					},
+					{
+						"$ref": "#/components/parameters/skip"
+					},
+					{
+						"$ref": "#/components/parameters/fields"
+					},
+					{
+						"$ref": "#/components/parameters/query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/Attachment"
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"operationId": "attachments_upload",
+				"summary": "Upload an attachment to an experiment",
+				"description": "Uploads an attachment. The maximum file size is 5 TB.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"file": {
+										"type": "string",
+										"format": "binary"
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Created",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Attachment"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/attachments/{attachmentId}": {
+			"delete": {
+				"operationId": "attachments_delete",
+				"summary": "Delete an attachment",
+				"description": "Deletes an attachment.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the file belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "attachmentId",
+						"in": "path",
+						"description": "ID of the attachment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "No Content"
+					}
+				}
+			},
+			"patch": {
+				"operationId": "attachments_update",
+				"summary": "Update an attachment",
+				"description": "Updates an attachment. The only writable property is the filename; thus this method is only suitable for renaming an attachment.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the file belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "attachmentId",
+						"in": "path",
+						"description": "ID of the attachment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/Attachment"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Attachment"
+								}
+							}
+						}
+					}
+				}
+			},
+			"get": {
+				"operationId": "attachments_download",
+				"summary": "Download an attachment",
+				"description": "Downloads an attachment.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the file belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "attachmentId",
+						"in": "path",
+						"description": "ID of the attachment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"headers": {
+							"Content-Type": {
+								"schema": {
+									"type": "string"
+								}
+							},
+							"Content-Disposition": {
+								"schema": {
+									"type": "string"
+								}
+							}
+						},
+						"content": {
+							"*/*": {
+								"schema": {
+									"type": "string",
+									"format": "binary"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/compensations": {
+			"get": {
+				"operationId": "compensations_list",
+				"summary": "List compensations in experiment",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"$ref": "#/components/parameters/limit"
+					},
+					{
+						"$ref": "#/components/parameters/skip"
+					},
+					{
+						"$ref": "#/components/parameters/fields"
+					},
+					{
+						"$ref": "#/components/parameters/query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "List of Compensations.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/Compensation"
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"operationId": "compensations_create",
+				"summary": "Create a compensation matrix",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/Compensation"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Compensation created.",
+						"headers": {
+							"Location": {
+								"description": "URI of created Compensation.",
+								"schema": {
+									"type": "string"
+								}
+							}
+						},
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Compensation"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/compensations/{compensationId}": {
+			"get": {
+				"operationId": "compensations_read",
+				"summary": "Get a compensation matrix by ID",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the compensation belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "compensationId",
+						"in": "path",
+						"description": "ID of the compensation matrix.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Compensation details.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Compensation"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Compensation not found."
+					}
+				}
+			},
+			"patch": {
+				"operationId": "compensations_update",
+				"summary": "Update a compensation matrix",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the compensation belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "compensationId",
+						"in": "path",
+						"description": "ID of the compensation matrix.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/Compensation"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Compensation description after update.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Compensation"
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Compensation not found."
+					}
+				}
+			},
+			"delete": {
+				"operationId": "compensations_delete",
+				"summary": "Delete a compensation matrix",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the compensation belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "compensationId",
+						"in": "path",
+						"description": "ID of the compensation matrix.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Compensation matrix successfully deleted."
+					},
+					"404": {
+						"description": "Compensation not found."
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles": {
+			"get": {
+				"operationId": "fcsfiles_list",
+				"summary": "List FCS files in an experiment",
+				"description": "Gets the list of all FCS files for the experiment.\n\nSoft-deleted FCS files are included by default; use `?eq(deleted,null)` in the query to exclude them.\n\nThe `header` field is not returned by default due to its size. To include it, specify `fields=+header` in the query.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the file belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"$ref": "#/components/parameters/limit"
+					},
+					{
+						"$ref": "#/components/parameters/skip"
+					},
+					{
+						"$ref": "#/components/parameters/fields"
+					},
+					{
+						"$ref": "#/components/parameters/query"
+					},
+					{
+						"name": "includeControls",
+						"schema": {
+							"type": "boolean"
+						},
+						"in": "query",
+						"description": "Include control FCS files. Defaults to false."
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "List of FCS files.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/FcsFile"
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"operationId": "fcsfiles_upload",
+				"summary": "Upload an FCS file to an experiment",
+				"description": "With a multipart body, uploads a file. The maximum file size is approximately 2.3 GB. Contact us if you need to work with larger files.\n\nAutomatically parses panels and annotations and updates ScaleSets to include all channels in the file.\n\nWith a JSON body, creates an FCS file by copying, concatenating and/or subsampling existing file(s) from this or other experiments, or by importing from an S3-compatible service. This endpoint can be used to import files from other experiments.\n\nWhen concatenating and subsampling at the same time, subsampling is applied to each file before concatenating.\n\nIf `addFileNumber` is true, a file number column (channel) will be added to the output file indicating which file each event (cell) came from. The values in this column have a uniform random spread (±0.25 of the integer value) to ease visualization. While this column can be useful for analysis, it will cause the experiment to have FCS files with different panels unless all FCS files that have not been concatenated are deleted.\n\nDuring concatenation, any FCS header parameters that do not match between files will be removed, with some exceptions:\n\n* `$BTIM` (clock time at beginning of acquisition) and `$DATE` will be set to the earliest value among the input files.\n\n* `$ETIM` (clock time at end of acquisition) will be set to the latest value among the input files.\n\n* `$PnR` (range for parameter `n`) will be set to the highest value among the input files.\n\nAll channels present in the first FCS file in the `fcsFiles` parameter must also be present in the other FCS files.\n\nWhen importing from an S3-compatible service, be aware of the following:\n\n* Only a single file can be imported at a time.\n\n* The `host` property must include the bucket and region as applicable. For example, for AWS, this would look like `mybucket.s3.us-east-2.amazonaws.com`.\n\n* The `path` property must specify the full path to the object, e.g. `/Study001/Specimen01.fcs`.\n\n* Importing private S3 objects requires an `accessKey` and a `secretKey` for a user with appropriate permissions. For AWS, `GetObject` is required.\n\n* Importing objects may incur fees from the S3 service provider.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the file belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"multipart/form-data": {
+							"schema": {
+								"properties": {
+									"file": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"format": "binary"
+										}
+									}
+								}
+							}
+						},
+						"application/json": {
+							"schema": {
+								"properties": {
+									"fcsFiles": {
+										"type": "array",
+										"items": {
+											"oneOf": [
+												{
+													"type": "string"
+												},
+												{
+													"type": "object",
+													"properties": {
+														"experimentId": {
+															"type": "string",
+															"pattern": "^[0-9a-f]{24}$"
+														},
+														"_id": {
+															"type": "string",
+															"pattern": "^[0-9a-f]{24}$"
+														}
+													}
+												},
+												{
+													"type": "object",
+													"properties": {
+														"host": {
+															"type": "string"
+														},
+														"path": {
+															"type": "string"
+														},
+														"accessKey": {
+															"type": "string"
+														},
+														"secretKey": {
+															"type": "string"
+														}
+													}
+												}
+											]
+										}
+									},
+									"filename": {
+										"type": "string"
+									},
+									"addFileNumber": {
+										"type": "boolean"
+									},
+									"addEventNumber": {
+										"type": "boolean"
+									},
+									"preSubsampleN": {
+										"type": "number"
+									},
+									"preSubsampleP": {
+										"type": "number"
+									}
+								},
+								"required": [
+									"fcsFiles"
+								]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "FCS file uploaded successfully.",
+						"headers": {
+							"Location": {
+								"description": "URI of uploaded FCS file.",
+								"schema": {
+									"type": "string"
+								}
+							}
+						},
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FcsFile"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles/{fcsfileId}": {
+			"get": {
+				"operationId": "fcsfiles_read",
+				"summary": "Get FCS file metadata",
+				"description": "Gets metadata about the file.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "fcsFileId",
+						"in": "path",
+						"description": "ID of the FCS file.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "FCS file metadata.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FcsFile"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "fcsfiles_delete",
+				"summary": "Delete an FCS file",
+				"description": "Deletes the file immediately. To soft-delete a file, set its `deleted` property instead.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "fcsFileId",
+						"in": "path",
+						"description": "ID of the FCS file.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "FCS file successfully deleted."
+					}
+				}
+			},
+			"patch": {
+				"operationId": "fcsfiles_update",
+				"summary": "Update an FCS file",
+				"description": "Modifies an FCS file's metadata.\n\nWhen modifying annotations, the characters `\\r` and `\\n` and leading and trailing whitespace will automatically be removed from annotation values by the server.\n\nNote that if the experiment has `annotationValidators` and the request includes changes to annotations that would violate those validators, the change will still be applied. You must make an additional request to validate the FCS files using the [validate](#validate) endpoint.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "fcsFileId",
+						"in": "path",
+						"description": "ID of the FCS file.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/FcsFile"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Success",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FcsFile"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Update rejected. See response message for details."
+					},
+					"404": {
+						"description": "FCS file not found."
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles/{fcsfileId}.fcs": {
+			"get": {
+				"operationId": "fcsfiles_download_fcs_get",
+				"summary": "Download FCS file or population (FCS format)",
+				"description": "Retrieves the FCS file in FCS format. Optionally gates a specified population and/or subsamples.\n\nSet the `original` query parameter to `true` to retrieve the original FCS file verbatim. When exporting with the `original` parameter set to `false` or left unspecified, the following apply:\n\n* The current value of the file's `panel` property will be used to set the `$PnS` (reagent) header keywords.\n\n* The `compensatedQ` and `compensationId` parameters will be used to set the `$SPILLOVER` header keyword.\n\n* Other synonymous changes may be present. For example, the `DATA` segment will always be little-endian.\n\nWhen sending the file to an S3-compatible service, use the `POST` HTTP method instead.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "fcsFileId",
+						"in": "path",
+						"description": "ID of the FCS file.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "compensatedQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "If `true`, applies the compensation specified in `compensationId` to the exported events. For TSV format, the numerical values will be the compensated values. For FCS format, the numerical values will be unchanged, but the file header will contain the compensation as the spill string (file-internal compensation)."
+					},
+					{
+						"name": "compensationId",
+						"in": "query",
+						"schema": {
+							"oneOf": [
+								{
+									"type": "string",
+									"pattern": "^[0-9a-f]{24}$"
+								},
+								{
+									"type": "integer",
+									"enum": [
+										0,
+										-1,
+										-2
+									]
+								}
+							]
+						},
+						"description": "Required if `populationId` or `compensatedQ` is specified. Compensation to use for gating."
+					},
+					{
+						"name": "headers",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "For TSV format only. If `true`, a header row containing the channel names will be included."
+					},
+					{
+						"name": "original",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "If `true`, the returned file will be byte-for-byte identical to the originally uploaded file. If `false` or unspecified (and `compensatedQ` is false, `populationId` is unspecified and all subsampling parameters are unspecified), the returned file will contain essentially the same data as the originally uploaded file, but may not be byte-for-byte identical. For example, the byte ordering of the `DATA` segment will always be little-endian and any extraneous information appended to the end of the original file will be stripped. This parameter takes precedence over `compensatedQ`, `populationId` and the subsampling parameters."
+					},
+					{
+						"name": "populationId",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$",
+							"nullable": true
+						},
+						"description": "If provided, only events from this population will be included in the output file."
+					},
+					{
+						"name": "postSubsampleN",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"description": "Randomly subsample the file to contain this many events after gating."
+					},
+					{
+						"name": "postSubsampleP",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 1
+						},
+						"description": "Randomly subsample the file to contain this percent of events after gating."
+					},
+					{
+						"name": "preSubsampleN",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"description": "Randomly subsample the file to contain this many events before gating."
+					},
+					{
+						"name": "preSubsampleP",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 1
+						},
+						"description": "Randomly subsample the file to contain this percent of events before gating."
+					},
+					{
+						"name": "seed",
+						"in": "query",
+						"schema": {
+							"type": "number"
+						},
+						"description": "Seed for random number generator used for subsampling. Use for deterministic (reproducible) subsampling. If omitted, a pseudo-random value is used."
+					},
+					{
+						"name": "addEventNumber",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Add an event number column to the exported file. When a `populationId` is specified (when gating), this number corresponds to the index of the event in the original file."
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "FCS file data",
+						"content": {
+							"application/vnd.isac.fcs": {
+								"schema": {
+									"type": "string",
+									"format": "binary"
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"operationId": "fcsfiles_download_fcs_post",
+				"summary": "Download FCS file or population or send to S3 (FCS format)",
+				"description": "Retrieves the FCS file in FCS format. Optionally gates a specified population and/or subsamples. The file can either be downloaded or sent to an S3-compatible service.\n\nSet the `original` query parameter to `true` to retrieve the original FCS file verbatim. When exporting with the `original` parameter set to `false` or left unspecified, the following apply:\n\n* The current value of the file's `panel` property will be used to set the `$PnS` (reagent) header keywords.\n\n* The `compensatedQ` and `compensationId` parameters will be used to set the `$SPILLOVER` header keyword.\n\n* Other synonymous changes may be present. For example, the `DATA` segment will always be little-endian.\n\nWhen sending the file to an S3-compatible service, supply a `dest` object in the body.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "fcsFileId",
+						"in": "path",
+						"description": "ID of the FCS file.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "compensatedQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "If `true`, applies the compensation specified in `compensationId` to the exported events. For TSV format, the numerical values will be the compensated values. For FCS format, the numerical values will be unchanged, but the file header will contain the compensation as the spill string (file-internal compensation)."
+					},
+					{
+						"name": "compensationId",
+						"in": "query",
+						"schema": {
+							"oneOf": [
+								{
+									"type": "string",
+									"pattern": "^[0-9a-f]{24}$"
+								},
+								{
+									"type": "integer",
+									"enum": [
+										0,
+										-1,
+										-2
+									]
+								}
+							]
+						},
+						"description": "Required if `populationId` or `compensatedQ` is specified. Compensation to use for gating."
+					},
+					{
+						"name": "headers",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "For TSV format only. If `true`, a header row containing the channel names will be included."
+					},
+					{
+						"name": "original",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "If `true`, the returned file will be byte-for-byte identical to the originally uploaded file. If `false` or unspecified (and `compensatedQ` is false, `populationId` is unspecified and all subsampling parameters are unspecified), the returned file will contain essentially the same data as the originally uploaded file, but may not be byte-for-byte identical. For example, the byte ordering of the `DATA` segment will always be little-endian and any extraneous information appended to the end of the original file will be stripped. This parameter takes precedence over `compensatedQ`, `populationId` and the subsampling parameters."
+					},
+					{
+						"name": "populationId",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$",
+							"nullable": true
+						},
+						"description": "If provided, only events from this population will be included in the output file."
+					},
+					{
+						"name": "postSubsampleN",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"description": "Randomly subsample the file to contain this many events after gating."
+					},
+					{
+						"name": "postSubsampleP",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 1
+						},
+						"description": "Randomly subsample the file to contain this percent of events after gating."
+					},
+					{
+						"name": "preSubsampleN",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"description": "Randomly subsample the file to contain this many events before gating."
+					},
+					{
+						"name": "preSubsampleP",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 1
+						},
+						"description": "Randomly subsample the file to contain this percent of events before gating."
+					},
+					{
+						"name": "seed",
+						"in": "query",
+						"schema": {
+							"type": "number"
+						},
+						"description": "Seed for random number generator used for subsampling. Use for deterministic (reproducible) subsampling. If omitted, a pseudo-random value is used."
+					},
+					{
+						"name": "addEventNumber",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Add an event number column to the exported file. When a `populationId` is specified (when gating), this number corresponds to the index of the event in the original file."
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"dest": {
+										"type": "object",
+										"description": "If copying to an S3-compatible service, information about that service.",
+										"properties": {
+											"host": {
+												"type": "string",
+												"description": "Required for S3 transfers. The full S3 host, including the bucket and region as applicable. For example, for AWS, this would look like `mybucket.s3.us-east-2.amazonaws.com`."
+											},
+											"path": {
+												"type": "string",
+												"description": "The path prefix for the object. This is concatenated directly with the file name. Use a trailing \"/\" to specify a \"directory\" in S3. For example, if the path is `/Study001/` and the file is called `Specimen01.fcs`, the object key will be `/Study001/Specimen01.fcs`. Use no trailing slash to specify a file prefix. For example, if the path is `/transfer1_`, the object key will be `/transfer1_Specimen01.fcs`. Note that S3 object keys must start with \"/\"; a path of \"\" will result in an `Invalid URI` response. Defaults to \"/\"."
+											},
+											"accessKey": {
+												"type": "string",
+												"description": "Required for private buckets. The S3 access key. Must be associated with an account with appropriate S3 permissions (e.g. `PutObject`)."
+											},
+											"secretKey": {
+												"type": "string",
+												"description": "Required for private buckets. The S3 secret key."
+											},
+											"headers": {
+												"type": "object",
+												"description": "Custom headers to include in the S3 request. Common examples are `x-amz-storage-class`/`x-goog-storage-class` and `x-amz-server-side-encryption`. Some headers, such as `Content-Length`, `Content-MD5` and `Content-Type`, cannot be modified. Refer to <https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html> for AWS header documentation and <https://cloud.google.com/storage/docs/migrating#custommeta> regarding compatibility with Google Cloud Platform."
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "FCS file data or S3 response",
+						"content": {
+							"application/vnd.isac.fcs": {
+								"schema": {
+									"type": "string",
+									"format": "binary"
+								}
+							},
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"s3Status": {
+											"type": "integer",
+											"description": "HTTP status code from S3",
+											"example": 200
+										},
+										"s3StatusMessage": {
+											"type": "string",
+											"description": "HTTP status message from S3",
+											"example": "OK"
+										},
+										"s3Headers": {
+											"type": "object",
+											"description": "HTTP headers from S3"
+										},
+										"s3Response": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles/{fcsfileId}.tsv": {
+			"get": {
+				"operationId": "fcsfiles_download_tsv_get",
+				"summary": "Download FCS file or population or send to S3 (TSV format)",
+				"description": "Retrieves the FCS file in TSV format. Optionally gates a specified population and/or subsamples. The file can either be downloaded or sent to an S3-compatible service.\n\nThe file's `panel` property will be used to set the column headers.\n\nWhen sending the file to an S3-compatible service, use the `POST` HTTP method.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "fcsFileId",
+						"in": "path",
+						"description": "ID of the FCS file.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "compensatedQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "If `true`, applies the compensation specified in `compensationId` to the exported events. For TSV format, the numerical values will be the compensated values. For FCS format, the numerical values will be unchanged, but the file header will contain the compensation as the spill string (file-internal compensation)."
+					},
+					{
+						"name": "compensationId",
+						"in": "query",
+						"schema": {
+							"oneOf": [
+								{
+									"type": "string",
+									"pattern": "^[0-9a-f]{24}$"
+								},
+								{
+									"type": "integer",
+									"enum": [
+										0,
+										-1,
+										-2
+									]
+								}
+							]
+						},
+						"description": "Required if `populationId` or `compensatedQ` is specified. Compensation to use for gating."
+					},
+					{
+						"name": "headers",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "For TSV format only. If `true`, a header row containing the channel names will be included."
+					},
+					{
+						"name": "original",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "If `true`, the returned file will be byte-for-byte identical to the originally uploaded file. If `false` or unspecified (and `compensatedQ` is false, `populationId` is unspecified and all subsampling parameters are unspecified), the returned file will contain essentially the same data as the originally uploaded file, but may not be byte-for-byte identical. For example, the byte ordering of the `DATA` segment will always be little-endian and any extraneous information appended to the end of the original file will be stripped. This parameter takes precedence over `compensatedQ`, `populationId` and the subsampling parameters."
+					},
+					{
+						"name": "populationId",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$",
+							"nullable": true
+						},
+						"description": "If provided, only events from this population will be included in the output file."
+					},
+					{
+						"name": "postSubsampleN",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"description": "Randomly subsample the file to contain this many events after gating."
+					},
+					{
+						"name": "postSubsampleP",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 1
+						},
+						"description": "Randomly subsample the file to contain this percent of events after gating."
+					},
+					{
+						"name": "preSubsampleN",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"description": "Randomly subsample the file to contain this many events before gating."
+					},
+					{
+						"name": "preSubsampleP",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 1
+						},
+						"description": "Randomly subsample the file to contain this percent of events before gating."
+					},
+					{
+						"name": "seed",
+						"in": "query",
+						"schema": {
+							"type": "number"
+						},
+						"description": "Seed for random number generator used for subsampling. Use for deterministic (reproducible) subsampling. If omitted, a pseudo-random value is used."
+					},
+					{
+						"name": "addEventNumber",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Add an event number column to the exported file. When a `populationId` is specified (when gating), this number corresponds to the index of the event in the original file."
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Data in TSV format.",
+						"content": {
+							"text/tab-separated-values": {
+								"schema": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"operationId": "fcsfiles_download_tsv_post",
+				"summary": "Download FCS file or population (TSV format)",
+				"description": "Retrieves the FCS file in TSV format. Optionally gates a specified population and/or subsamples. The file can either be downloaded or sent to an S3-compatible service.\n\nThe file's `panel` property will be used to set the column headers.\n\nWhen sending the file to an S3-compatible service, supply a `dest` object in the body.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "fcsFileId",
+						"in": "path",
+						"description": "ID of the FCS file.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "compensatedQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "If `true`, applies the compensation specified in `compensationId` to the exported events. For TSV format, the numerical values will be the compensated values. For FCS format, the numerical values will be unchanged, but the file header will contain the compensation as the spill string (file-internal compensation)."
+					},
+					{
+						"name": "compensationId",
+						"in": "query",
+						"schema": {
+							"oneOf": [
+								{
+									"type": "string"
+								},
+								{
+									"type": "integer",
+									"enum": [
+										0,
+										-1,
+										-2
+									]
+								}
+							]
+						},
+						"description": "Required if `populationId` or `compensatedQ` is specified. Compensation to use for gating."
+					},
+					{
+						"name": "headers",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "For TSV format only. If `true`, a header row containing the channel names will be included."
+					},
+					{
+						"name": "original",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "If `true`, the returned file will be byte-for-byte identical to the originally uploaded file. If `false` or unspecified (and `compensatedQ` is false, `populationId` is unspecified and all subsampling parameters are unspecified), the returned file will contain essentially the same data as the originally uploaded file, but may not be byte-for-byte identical. For example, the byte ordering of the `DATA` segment will always be little-endian and any extraneous information appended to the end of the original file will be stripped. This parameter takes precedence over `compensatedQ`, `populationId` and the subsampling parameters."
+					},
+					{
+						"name": "populationId",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$",
+							"nullable": true
+						},
+						"description": "If provided, only events from this population will be included in the output file."
+					},
+					{
+						"name": "postSubsampleN",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"description": "Randomly subsample the file to contain this many events after gating."
+					},
+					{
+						"name": "postSubsampleP",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 1
+						},
+						"description": "Randomly subsample the file to contain this percent of events after gating."
+					},
+					{
+						"name": "preSubsampleN",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"description": "Randomly subsample the file to contain this many events before gating."
+					},
+					{
+						"name": "preSubsampleP",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 1
+						},
+						"description": "Randomly subsample the file to contain this percent of events before gating."
+					},
+					{
+						"name": "seed",
+						"in": "query",
+						"schema": {
+							"type": "number"
+						},
+						"description": "Seed for random number generator used for subsampling. Use for deterministic (reproducible) subsampling. If omitted, a pseudo-random value is used."
+					},
+					{
+						"name": "addEventNumber",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Add an event number column to the exported file. When a `populationId` is specified (when gating), this number corresponds to the index of the event in the original file."
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"dest": {
+										"type": "object",
+										"description": "If copying to an S3-compatible service, information about that service.",
+										"properties": {
+											"host": {
+												"type": "string",
+												"description": "Required for S3 transfers. The full S3 host, including the bucket and region as applicable. For example, for AWS, this would look like `mybucket.s3.us-east-2.amazonaws.com`."
+											},
+											"path": {
+												"type": "string",
+												"description": "The path prefix for the object. This is concatenated directly with the file name. Use a trailing \"/\" to specify a \"directory\" in S3. For example, if the path is `/Study001/` and the file is called `Specimen01.fcs`, the object key will be `/Study001/Specimen01.fcs`. Use no trailing slash to specify a file prefix. For example, if the path is `/transfer1_`, the object key will be `/transfer1_Specimen01.fcs`. Note that S3 object keys must start with \"/\"; a path of \"\" will result in an `Invalid URI` response. Defaults to \"/\"."
+											},
+											"accessKey": {
+												"type": "string",
+												"description": "Required for private buckets. The S3 access key. Must be associated with an account with appropriate S3 permissions (e.g. `PutObject`)."
+											},
+											"secretKey": {
+												"type": "string",
+												"description": "Required for private buckets. The S3 secret key."
+											},
+											"headers": {
+												"type": "object",
+												"description": "Custom headers to include in the S3 request. Common examples are `x-amz-storage-class`/`x-goog-storage-class` and `x-amz-server-side-encryption`. Some headers, such as `Content-Length`, `Content-MD5` and `Content-Type`, cannot be modified. Refer to <https://docs.aws.amazon.com/AmazonS3/latest/API/API_PutObject.html> for AWS header documentation and <https://cloud.google.com/storage/docs/migrating#custommeta> regarding compatibility with Google Cloud Platform."
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Data in TSV format or S3 response",
+						"content": {
+							"text/tab-separated-values": {
+								"schema": {
+									"type": "string"
+								}
+							},
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"s3Status": {
+											"type": "integer",
+											"description": "HTTP status code from S3",
+											"example": 200
+										},
+										"s3StatusMessage": {
+											"type": "string",
+											"description": "HTTP status message from S3",
+											"example": "OK"
+										},
+										"s3Headers": {
+											"type": "object",
+											"description": "HTTP headers from S3"
+										},
+										"s3Response": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles/zip": {
+			"get": {
+				"operationId": "fcsfiles_download_zip_get",
+				"summary": "Download multiple FCS files or populations (FCS or TSV)",
+				"description": "Downloads multiple files bundled into a ZIP archive. Files can either be gated or ungated.\n\nThere are two ways to make this request: `GET` or `POST`. The `GET` request can be easier to make, but when requesting many files or populations the maximum URL length could be exceeded. (The combination of the request URL and headers together must be less than about 15 KB.) The `POST` route instead allows the parameters to be passed in the request body, for which there is no practical maximum size.\n\nEvery combination of `fcsFileIds` and `populationIds` will be exported (i.e. every population for every FCS file specified).\n\nUnless the original, unmodified FCS files are being exported, the current values of the files' `panel` properties will be used to set the `$PnS` (reagent) header keywords.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "fcsFileIds",
+						"in": "query",
+						"schema": {
+							"type": "array",
+							"items": {
+								"type": "string",
+								"pattern": "^[0-9a-f]{24}$"
+							}
+						},
+						"description": "Defaults to returning all non-control files in the experiment."
+					},
+					{
+						"name": "filenameTemplate",
+						"in": "query",
+						"schema": {
+							"type": "string"
+						},
+						"description": "Tokenized template to dynamically name each file in the resulting archive."
+					},
+					{
+						"name": "populationIds",
+						"in": "query",
+						"schema": {
+							"type": "array",
+							"items": {
+								"type": "string",
+								"pattern": "^[0-9a-f]{24}$",
+								"nullable": true
+							},
+							"description": "If provided, only events from these populations will be included in the output files. Defaults to ungated."
+						}
+					},
+					{
+						"name": "compensationId",
+						"in": "query",
+						"schema": {
+							"oneOf": [
+								{
+									"type": "string",
+									"pattern": "^[0-9a-f]{24}$"
+								},
+								{
+									"type": "integer",
+									"enum": [
+										0,
+										-1,
+										-2
+									]
+								}
+							]
+						},
+						"description": "Required if `populationIds` or `compensatedQ` is specified. Compensation to use for gating."
+					},
+					{
+						"name": "compensatedQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean",
+							"description": "If `true`, applies the compensation specified in `compensationId` to the exported events. For TSV format, the numerical values will be the compensated values. For FCS format, the numerical values will be unchanged, but the file header will contain the compensation as the spill string (file-internal compensation)."
+						}
+					},
+					{
+						"name": "addEventNumber",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Add an event number column to the exported file. When `populationIds` is specified (when gating), this number corresponds to the index of the event in the original file."
+					},
+					{
+						"name": "preSubsampleN",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"description": "Randomly subsample the file to contain this many events before gating."
+					},
+					{
+						"name": "preSubsampleP",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 1
+						},
+						"description": "Randomly subsample the file to contain this percent of events before gating."
+					},
+					{
+						"name": "postSubsampleN",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"description": "Randomly subsample the file to contain this many events after gating."
+					},
+					{
+						"name": "postSubsampleP",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 1
+						},
+						"description": "Randomly subsample the file to contain this percent of events after gating."
+					},
+					{
+						"name": "seed",
+						"in": "query",
+						"schema": {
+							"type": "number"
+						},
+						"description": "Seed for random number generator used for subsampling. Use for deterministic (reproducible) subsampling. If omitted, a pseudo-random value is used."
+					},
+					{
+						"name": "format",
+						"in": "query",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"enum": [
+								"FCS",
+								"TSV (with header)",
+								"TSV (without header)"
+							],
+							"description": "Specifies the format."
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "ZIP archive containing FCS files.",
+						"content": {
+							"application/zip": {
+								"schema": {
+									"type": "string",
+									"format": "binary"
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"operationId": "fcsfiles_download_zip_post",
+				"summary": "Download multiple FCS files or populations (FCS or TSV)",
+				"description": "Downloads multiple files bundled into a ZIP archive. Files can either be gated or ungated.\n\nThere are two ways to make this request: `GET` or `POST`. The `GET` request can be easier to make, but when requesting many files or populations the maximum URL length could be exceeded. (The combination of the request URL and headers together must be less than about 15 KB.) The `POST` route instead allows the parameters to be passed in the request body, for which there is no practical maximum size.\n\nEvery combination of `fcsFileIds` and `populationIds` will be exported (i.e. every population for every FCS file specified).\n\nUnless the original, unmodified FCS files are being exported, the current values of the files' `panel` properties will be used to set the `$PnS` (reagent) header keywords.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"fcsFileIds": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										"description": "Defaults to returning all non-control files in the experiment.",
+										"nullable": true
+									},
+									"populationIds": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$",
+											"nullable": true
+										},
+										"description": "If provided, only events from these populations will be included in the output files. Defaults to ungated.",
+										"nullable": true
+									},
+									"compensationId": {
+										"oneOf": [
+											{
+												"type": "string",
+												"pattern": "^[0-9a-f]{24}$"
+											},
+											{
+												"type": "integer",
+												"enum": [
+													0,
+													-1,
+													-2
+												]
+											}
+										],
+										"description": "Required if `populationIds` or `compensatedQ` is specified. Compensation to use for gating."
+									},
+									"compensatedQ": {
+										"type": "boolean",
+										"description": "If `true`, applies the compensation specified in `compensationId` to the exported events. For TSV format, the numerical values will be the compensated values. For FCS format, the numerical values will be unchanged, but the file header will contain the compensation as the spill string (file-internal compensation)."
+									},
+									"addEventNumber": {
+										"type": "boolean",
+										"description": "Add an event number column to the exported file. When `populationIds` is specified (when gating), this number corresponds to the index of the event in the original file.",
+										"default": false
+									},
+									"preSubsampleN": {
+										"type": "integer",
+										"minimum": 0,
+										"description": "Randomly subsample the file to contain this many events before gating.",
+										"nullable": true
+									},
+									"preSubsampleP": {
+										"type": "number",
+										"minimum": 0,
+										"maximum": 1,
+										"description": "Randomly subsample the file to contain this percent of events before gating.",
+										"nullable": true
+									},
+									"postSubsampleN": {
+										"type": "integer",
+										"minimum": 0,
+										"description": "Randomly subsample the file to contain this many events after gating.",
+										"nullable": true
+									},
+									"postSubsampleP": {
+										"minimum": 0,
+										"maximum": 1,
+										"type": "number",
+										"description": "Randomly subsample the file to contain this percent of events after gating.",
+										"nullable": true
+									},
+									"seed": {
+										"type": "number",
+										"description": "Seed for random number generator used for subsampling. Use for deterministic (reproducible) subsampling. If omitted, a pseudo-random value is used.",
+										"nullable": true
+									},
+									"format": {
+										"type": "string",
+										"enum": [
+											"FCS",
+											"TSV (with header)",
+											"TSV (without header)"
+										],
+										"description": "Specifies the format. TSV is tab-separated values. FCS is the original FCS file format."
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "ZIP archive containing FCS files.",
+						"content": {
+							"application/zip": {
+								"schema": {
+									"type": "string",
+									"format": "binary"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles/renameReagent": {
+			"post": {
+				"operationId": "fcsfiles_rename_reagent",
+				"summary": "Rename reagent for FCS files in panel",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles/renamePanel": {
+			"post": {
+				"operationId": "fcsfiles_rename_panel",
+				"summary": "Rename a panel",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles/validate": {
+			"post": {
+				"operationId": "fcsfiles_validate",
+				"summary": "Check annotations against FCS file validators",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles/deleteAnnotation/{annotationName}": {
+			"post": {
+				"operationId": "fcsfiles_delete_annotation",
+				"summary": "Delete annotation from all FCS files",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles/renameAnnotation/{annotationName}": {
+			"post": {
+				"operationId": "fcsfiles_rename_annotation",
+				"summary": "Rename annotation for all FCS files",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles/bulkupdate": {
+			"post": {
+				"operationId": "fcsfiles_bulk_update",
+				"summary": "Updates multiple FCS files",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles/bulkdelete": {
+			"post": {
+				"operationId": "fcsfiles_bulk-delete",
+				"summary": "Soft-deletes multiple FCS files",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles/annotationsFromHeader": {
+			"post": {
+				"operationId": "fcsfiles_annotations_from_header",
+				"summary": "Adds annotations from FCS file headers",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}/fcsfiles/{fcsFileId}/suggestedscales": {
+			"post": {
+				"operationId": "fcsfiles_suggested_scales",
+				"summary": "Gets suggested scales for FCS file",
+				"description": "*This endpoint is currently undocumented.*"
+			}
+		},
+		"/experiments/{experimentId}/gates": {
+			"get": {
+				"operationId": "gates_list",
+				"summary": "List gates in an experiment",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the gate belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"$ref": "#/components/parameters/limit"
+					},
+					{
+						"$ref": "#/components/parameters/skip"
+					},
+					{
+						"$ref": "#/components/parameters/fields"
+					},
+					{
+						"$ref": "#/components/parameters/query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "List of Gates.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/Gate"
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"operationId": "gates_create",
+				"summary": "Create one or more gates",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the compensation belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "createPopulation",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "If true, automatically creates a population for the gate."
+					},
+					{
+						"name": "parentPopulationId",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$",
+							"nullable": true
+						},
+						"description": "For use with `createPopulation=true`. Specifies the parent population."
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"oneOf": [
+									{
+										"$ref": "#/components/schemas/Gate"
+									},
+									{
+										"type": "array",
+										"items": {
+											"$ref": "#/components/schemas/Gate"
+										}
+									}
+								]
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Gate or gates created.",
+						"headers": {
+							"Location": {
+								"description": "URI of created gate.",
+								"schema": {
+									"type": "string"
+								}
+							}
+						},
+						"content": {
+							"application/json": {
+								"schema": {
+									"oneOf": [
+										{
+											"description": "Single gate created.",
+											"$ref": "#/components/schemas/Gate"
+										},
+										{
+											"description": "Multiple gates created.",
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Gate"
+											}
+										},
+										{
+											"description": "Gate and population created in tandem.",
+											"type": "object",
+											"properties": {
+												"gate": {
+													"$ref": "#/components/schemas/Gate"
+												},
+												"population": {
+													"$ref": "#/components/schemas/Population"
+												}
+											}
+										},
+										{
+											"description": "Gate and populations created in tandem (for compound gates).",
+											"type": "object",
+											"properties": {
+												"gate": {
+													"$ref": "#/components/schemas/Gate"
+												},
+												"populations": {
+													"type": "array",
+													"items": {
+														"$ref": "#/components/schemas/Population"
+													}
+												}
+											}
+										}
+									]
+								}
+							}
+						}
+					}
+				}
+			},
+			"patch": {
+				"operationId": "gates_update_group",
+				"summary": "Update a group of gates by GID",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the gate belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "gid",
+						"in": "query",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/Gate"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Gate(s) modified successfully.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"nModified": {
+											"description": "Number of gates modified.",
+											"type": "integer"
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "gates_delete_group",
+				"summary": "Delete a group of gates by GID",
+				"description": "If deleting a global gate (with `fcsFileId` set to `null`), all tailored gates with the same `gid` must be deleted first. Otherwise, a 400 error will occur.\n\nWhen deleting compound gates, the top-level `gid` must be used; specifying the `gid` of a sector (i.e. one listed in `model.gids`) will result in no gates being deleted.\n\nIf the operation results in no gates remaining with the same GID, then that GID will be removed from all populations in the experiment. The number of modified populations is reflected in the response.\n\nThe `exclude` parameter is deprecated. To untailor gates, use the untailoring API.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the gate belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "gid",
+						"in": "query",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "exclude",
+						"description": "ID (not GID) of gate to keep when deleting family.",
+						"deprecated": true,
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Gate(s) deleted successfully.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"nRemoved": {
+											"description": "Number of gates deleted.",
+											"type": "integer"
+										},
+										"populations": {
+											"type": "object",
+											"properties": {
+												"nModified": {
+													"description": "Number of populations modified.",
+													"type": "integer",
+													"minimum": 0
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/gates/reset": {
+			"post": {
+				"operationId": "gates_reset",
+				"summary": "Reset gates and populations",
+				"description": "Deletes all gates and populations.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the gate belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"gates": {
+											"type": "object",
+											"properties": {
+												"nRemoved": {
+													"type": "integer"
+												}
+											}
+										},
+										"populations": {
+											"type": "object",
+											"properties": {
+												"nRemoved": {
+													"type": "integer"
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/gates/{gateId}": {
+			"get": {
+				"operationId": "gates_read",
+				"summary": "Get an gate by ID",
+				"description": "Get single gate by ID.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the gate belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "gateId",
+						"in": "path",
+						"description": "ID of the gate.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Gate details.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Gate"
+								}
+							}
+						}
+					}
+				}
+			},
+			"patch": {
+				"operationId": "gates_update",
+				"summary": "Update a gate",
+				"description": "Update a single gate by ID.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the gate belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "gateId",
+						"in": "path",
+						"description": "ID of the gate.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/Gate"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Success.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Gate"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "gates_delete",
+				"summary": "Delete a gate",
+				"description": "If deleting a global gate (with `fcsFileId` set to `null`), all tailored gates with the same `gid` must be deleted first. Otherwise, a 400 error will occur.\n\nIf the operation results in no gates remaining with the same GID, then that GID will be removed from all populations in the experiment. The number of modified populations is reflected in the response.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the gate belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "gateId",
+						"in": "path",
+						"description": "ID of the gate.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Gate deleted successfully.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"nRemoved": {
+											"description": "Number of gates deleted.",
+											"type": "integer",
+											"minimum": 1,
+											"maximum": 1
+										},
+										"populations": {
+											"type": "object",
+											"properties": {
+												"nModified": {
+													"description": "Number of populations modified.",
+													"type": "integer",
+													"minimum": 0
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"404": {
+						"description": "Gate not found."
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/gates/applytailored": {
+			"post": {
+				"operationId": "gates_auto_tailor",
+				"summary": "Apply the supplied gate's tailoring to specified FCS files",
+				"description": "Applies `req.body.gate` to all files listed in `req.body.fcsFileIds`.\n\nIf `req.body.gate` has the same geometry as the global gate, then tailored gates for the target FcsFiles will be deleted. Otherwise, gates will be upserted for the target files.\n\nThe full gate must be supplied in `req.body.gate`.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "gid",
+						"in": "query",
+						"description": "GID of the gate to apply. Must be a top-level GID (not a sector GID).",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"gate": {
+										"$ref": "#/components/schemas/Gate"
+									},
+									"fcsFileIds": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										"description": "IDs of FCS files to which to copy this gate."
+									}
+								}
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "List of gates created, modified and deleted.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"inserted": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Gate"
+											}
+										},
+										"updated": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Gate"
+											}
+										},
+										"deleted": {
+											"type": "array",
+											"description": "Gates that were deleted.",
+											"items": {
+												"$ref": "#/components/schemas/Gate"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/gates/autotailor": {
+			"post": {
+				"operationId": "gates_auto_tailor",
+				"summary": "Automatically tailor gates based on gated reference files",
+				"description": "Tailors gates by aligning gates to the underlying data, learning from a set of manually gated reference files. Multiple gates can be tailored in one request, but all must use the same parent population and X and Y channels.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"compensation": {
+										"oneOf": [
+											{
+												"type": "string",
+												"pattern": "^[0-9a-f]{24}$"
+											},
+											{
+												"type": "integer",
+												"enum": [
+													0,
+													-1,
+													-2
+												]
+											}
+										]
+									},
+									"referenceFcsFileIds": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										"description": "IDs of manually gated reference FCS files."
+									},
+									"targetFcsFileIds": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										"description": "IDs of FCS files to which to tailor the gate(s)."
+									},
+									"tailorBy": {
+										"description": "Annotation names by which target files are tailored. Files with the same values for these annotation(s) will have the same gate geometry.",
+										"type": "array",
+										"items": {
+											"type": "string"
+										}
+									},
+									"gids": {
+										"description": "GIDs of gates to auto-tailor. All must use the same X and Y channels. For compound gates, specify the top-level GID; not the sector GID.",
+										"type": "array",
+										"items": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										}
+									},
+									"parentPopulationId": {
+										"type": "string",
+										"nullable": true,
+										"pattern": "^[0-9a-f]{24}$",
+										"description": "ID of the population to tailor the gates to. Must be specified because linked gates can have multiple parents."
+									},
+									"minEvents": {
+										"type": "integer",
+										"minimum": 0,
+										"default": 100,
+										"nullable": true,
+										"description": "Minimum number of events in the population for the file to be used as a target or reference."
+									},
+									"minImprovement": {
+										"type": "number",
+										"minimum": 0,
+										"maximum": 1,
+										"default": 0.02,
+										"nullable": true,
+										"description": "The minimum improvement in correlation of the target and reference images for the gate to be adjusted. Avoids over-tailoring gates when the original position is good enough."
+									},
+									"gaussianSmoothingVariance": {
+										"type": "number",
+										"minimum": 0,
+										"maximum": 10,
+										"default": 1.0,
+										"description": "Factor by which to smooth the plot on which the gates are tailored."
+									}
+								}
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "List of gates created, modified and deleted.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"inserted": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Gate"
+											}
+										},
+										"updated": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Gate"
+											}
+										},
+										"deleted": {
+											"type": "array",
+											"description": "IDs of gates that were deleted (were already tailored and now use the global gate).",
+											"items": {
+												"type": "string",
+												"pattern": "^[0-9a-f]{24}$"
+											}
+										},
+										"failedFcsFileIds": {
+											"type": "array",
+											"items": {
+												"type": "string",
+												"pattern": "^[0-9a-f]{24}$"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/gates/percentiletailor": {
+			"post": {
+				"operationId": "gates_percentile_tailor",
+				"summary": "Tailors gates using a percentile of control file(s)",
+				"description": "Moves a gate vertex to the specified percentile of the mean of one or more control file, working within groups of FCS files.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"q": {
+										"description": "The desired quantile.",
+										"type": "number",
+										"minimum": 0,
+										"maximum": 1
+									},
+									"populationId": {
+										"type": "string",
+										"nullable": true,
+										"description": "Population for calculating percentile.",
+										"pattern": "^[0-9a-f]{24}$"
+									},
+									"compensationId": {
+										"oneOf": [
+											{
+												"type": "string"
+											},
+											{
+												"type": "integer",
+												"enum": [
+													0,
+													-1,
+													-2
+												]
+											}
+										]
+									},
+									"channel": {
+										"type": "string",
+										"description": "Channel to use for calculating percentile."
+									},
+									"groups": {
+										"type": "array",
+										"description": "Groups of FCS files to tailor. The mean of the specified percentile of all `controlIds` files is used to position the vertex of the `fcsFileIds` files.",
+										"items": {
+											"type": "object",
+											"properties": {
+												"fcsFileIds": {
+													"type": "array",
+													"items": {
+														"type": "string",
+														"pattern": "^[0-9a-f]{24}$"
+													}
+												},
+												"controlIds": {
+													"type": "array",
+													"items": {
+														"type": "string",
+														"pattern": "^[0-9a-f]{24}$"
+													}
+												}
+											}
+										}
+									},
+									"gid": {
+										"type": "string",
+										"description": "The GID of the gate to tailor.",
+										"pattern": "^[0-9a-f]{24}$"
+									},
+									"vertexPath": {
+										"type": "string",
+										"description": "The dotted path to the vertex to tailor."
+									}
+								}
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "List of gates created, modified and deleted.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"inserted": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Population"
+											}
+										},
+										"updated": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Population"
+											}
+										},
+										"deleted": {
+											"type": "array",
+											"items": {}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/gates/rectangletopolygon": {
+			"post": {
+				"operationId": "gates_rectangle_to_polygon",
+				"summary": "Convert a rectangle gate to a polygon gate",
+				"description": "Converts all gates in the GID group from rectangles to polygons.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "gid",
+						"in": "query",
+						"description": "Gate group GID.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/PolygonGate"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/gates/disabletailoring": {
+			"post": {
+				"operationId": "gates_disabletailoring",
+				"summary": "Disable tailoring for a gate",
+				"description": "Disables tailoring, leaving a single gate in the GID group.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"gid": {
+										"type": "string",
+										"description": "The GID for which to disable tailoring."
+									},
+									"globalGateId": {
+										"type": "string",
+										"description": "The gate to make into the global gate."
+									}
+								}
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"nRemoved": {
+											"type": "integer"
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/plot": {
+			"get": {
+				"operationId": "plot",
+				"summary": "Render a flow plot",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "fcsFileId",
+						"in": "query",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						},
+						"description": "FCS file ID."
+					},
+					{
+						"name": "plotType",
+						"in": "query",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"enum": [
+								"contour",
+								"dot",
+								"density",
+								"histogram"
+							]
+						},
+						"description": "Plot type."
+					},
+					{
+						"name": "xChannel",
+						"in": "query",
+						"required": true,
+						"schema": {
+							"type": "string"
+						},
+						"description": "X channel name."
+					},
+					{
+						"name": "axesQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Display axes lines. Defaults to true."
+					},
+					{
+						"name": "axisLabelsQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Display axis labels. Defaults to true."
+					},
+					{
+						"name": "color",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"pattern": "^[a-fA-F]{3,8}$"
+						},
+						"description": "Case-insensitive string in the format `#rgb`, `#rgba`, `#rrggbb` or `#rrggbbaa`. The foreground color, i.e. color of curves in \"histogram\" and \"contour\" plots, dots in \"dot\" plots."
+					},
+					{
+						"name": "compensation",
+						"in": "query",
+						"schema": {
+							"oneOf": [
+								{
+									"type": "string",
+									"pattern": "^[0-9a-f]{24}$"
+								},
+								{
+									"type": "integer",
+									"enum": [
+										0,
+										-1
+									]
+								}
+							]
+						},
+						"description": "Compensation to use for gating and display."
+					},
+					{
+						"name": "gateLabel",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"enum": [
+								"eventCount",
+								"eventCountPerUl",
+								"mean",
+								"median",
+								"percent",
+								"mad",
+								"cv",
+								"stddev",
+								"geometricMean",
+								"name",
+								"none"
+							]
+						},
+						"description": "The gate label content."
+					},
+					{
+						"name": "gateLabelFontSize",
+						"in": "query",
+						"schema": {
+							"type": "number"
+						},
+						"description": "Font size for gate labels."
+					},
+					{
+						"name": "height",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"default": 228
+						},
+						"description": "Image height."
+					},
+					{
+						"name": "percentileStart",
+						"in": "query",
+						"schema": {
+							"type": "number"
+						},
+						"description": "For contour plots, the percentile of the first contour."
+					},
+					{
+						"name": "percentileStep",
+						"in": "query",
+						"schema": {
+							"type": "number"
+						},
+						"description": "For contour plots, the percentile step between each contour."
+					},
+					{
+						"name": "populationId",
+						"in": "query",
+						"schema": {
+							"type": "string",
+							"nullable": true,
+							"default": null
+						},
+						"description": "Defaults to ungated."
+					},
+					{
+						"name": "postSubsampleN",
+						"in": "query",
+						"schema": {
+							"type": "integer"
+						},
+						"description": "Randomly subsample the file to contain this many events after gating."
+					},
+					{
+						"name": "postSubsampleP",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 1
+						},
+						"description": "Randomly subsample the file to contain this percent of events (0 to 1) after gating."
+					},
+					{
+						"name": "preSubsampleN",
+						"in": "query",
+						"schema": {
+							"type": "integer"
+						},
+						"description": "Randomly subsample the file to contain this many events before gating."
+					},
+					{
+						"name": "preSubsampleP",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 1
+						},
+						"description": "Randomly subsample the file to contain this percent of events (0 to 1) before gating."
+					},
+					{
+						"name": "renderGates",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Render gates into the image."
+					},
+					{
+						"name": "seed",
+						"in": "query",
+						"schema": {
+							"type": "number"
+						},
+						"description": "Seed for random number generator used for subsampling. Use for deterministic (reproducible) subsampling. If omitted, a pseudo-random value is used."
+					},
+					{
+						"name": "smoothing",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"minimum": 0,
+							"maximum": 10,
+							"default": 0
+						},
+						"description": "For density and contour plots, adjusts the amount of smoothing. Defaults to 0 (no smoothing). Set to 1 for typical smoothing. Higher values (up to 10) increase smoothing."
+					},
+					{
+						"name": "strokeThickness",
+						"in": "query",
+						"schema": {
+							"type": "number",
+							"default": 1
+						},
+						"description": "The thickness of histogram and contour plot lines."
+					},
+					{
+						"name": "tickLabelsQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean",
+							"default": false
+						},
+						"description": "Display tick labels."
+					},
+					{
+						"name": "ticksQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean",
+							"default": true
+						},
+						"description": "Display ticks."
+					},
+					{
+						"name": "width",
+						"in": "query",
+						"schema": {
+							"type": "integer",
+							"default": 228
+						},
+						"description": "Image width."
+					},
+					{
+						"name": "xAxisLabelQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Display x axis label. Overrides `axisLabelsQ`."
+					},
+					{
+						"name": "xAxisQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Display x axis line. Overrides `axesQ`."
+					},
+					{
+						"name": "xTickLabelsQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Display x tick labels. Overrides `tickLabelsQ`."
+					},
+					{
+						"name": "xTicksQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Display x ticks. Overrides `ticksQ`."
+					},
+					{
+						"name": "yAxisLabelQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Display y axis label. Overrides `axisLabelsQ`."
+					},
+					{
+						"name": "yAxisQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Display y axis line. Overrides `axesQ`."
+					},
+					{
+						"name": "yChannel",
+						"in": "query",
+						"schema": {
+							"type": "string"
+						},
+						"description": "*for 2D plots* Y channel name."
+					},
+					{
+						"name": "yTickLabelsQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Display y tick labels. Overrides `tickLabelsQ`."
+					},
+					{
+						"name": "yTicksQ",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						},
+						"description": "Display y ticks. Overrides `ticksQ`."
+					},
+					{
+						"name": "zChannel",
+						"in": "query",
+						"schema": {
+							"type": "string"
+						},
+						"description": "*for dot plots colored by a 3rd channel* Color channel name."
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "The plot image",
+						"content": {
+							"image/png": {
+								"schema": {
+									"type": "string",
+									"format": "binary"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/populations": {
+			"get": {
+				"operationId": "populations_list",
+				"summary": "List populations in an experiment",
+				"description": "List populations in experiment.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the population belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"$ref": "#/components/parameters/limit"
+					},
+					{
+						"$ref": "#/components/parameters/skip"
+					},
+					{
+						"$ref": "#/components/parameters/fields"
+					},
+					{
+						"$ref": "#/components/parameters/query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "List of Populations.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/Population"
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"operationId": "populations_create",
+				"summary": "Create a population",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the population belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/Population"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Population created.",
+						"headers": {
+							"Location": {
+								"description": "URI of created population.",
+								"schema": {
+									"type": "string"
+								}
+							}
+						},
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Population"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/populations/copy": {
+			"post": {
+				"operationId": "populations_copy",
+				"summary": "Copy a population",
+				"description": "Copies a population and its gates below another population.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the population belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"srcId": {
+										"type": "string",
+										"description": "ID of the population to copy.",
+										"pattern": "^[0-9a-f]{24}$",
+										"nullable": true
+									},
+									"dstId": {
+										"type": "string",
+										"description": "ID of the population to paste below. Use `\"\"`, `null` or omit for ungated.",
+										"pattern": "^[0-9a-f]{24}$",
+										"nullable": true
+									},
+									"includeRoot": {
+										"type": "boolean",
+										"description": "Include the population specified by `srcId` in the paste operation. If false, only its descendant populations will be copied."
+									},
+									"includeChildren": {
+										"type": "boolean",
+										"description": "Include the children of the population specified by `srcId` in the paste operation. If false, copies the `srcId` population only."
+									},
+									"reference": {
+										"type": "boolean",
+										"default": false,
+										"description": "If true, the new populations will reference the existing gate GIDs instead of creating new gates."
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Lists of gates and populations created.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"gates": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Gate"
+											}
+										},
+										"populations": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Population"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/populations/reset": {
+			"post": {
+				"operationId": "populations_reset",
+				"summary": "Reset gates and populations",
+				"description": "Alias for `/experiments/{experimentId}/gates/reset`. Deletes all gates and populations.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the population belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"gates": {
+											"type": "object",
+											"properties": {
+												"nRemoved": {
+													"type": "integer"
+												}
+											}
+										},
+										"populations": {
+											"type": "object",
+											"properties": {
+												"nRemoved": {
+													"type": "integer"
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/populations/{populationId}": {
+			"get": {
+				"operationId": "populations_read",
+				"summary": "Get a population by ID",
+				"description": "Get single population by ID.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the population belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "populationId",
+						"in": "path",
+						"description": "ID of the population.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$",
+							"nullable": true
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Population details.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Population"
+								}
+							}
+						}
+					}
+				}
+			},
+			"patch": {
+				"operationId": "populations_update",
+				"summary": "Update a population",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the population belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "populationId",
+						"in": "path",
+						"description": "ID of the population.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/Population"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Population description after update.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Population"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "populations_delete",
+				"summary": "Delete a population",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the population belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "populationId",
+						"in": "path",
+						"description": "ID of the population.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "deleteBranch",
+						"description": "Delete descendant populations and gates also.",
+						"in": "query",
+						"schema": {
+							"type": "boolean"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "OK. Returned when using `deleteBranch=true`.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"nRemoved": {
+											"type": "integer"
+										},
+										"_id": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										"gates": {
+											"type": "object",
+											"properties": {
+												"nRemoved": {
+													"type": "integer"
+												},
+												"gid": {
+													"type": "array",
+													"items": {
+														"type": "string",
+														"pattern": "^[0-9a-f]{24}$"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					},
+					"204": {
+						"description": "No content. Returned when using `deleteBranch=false`."
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/createcombo": {
+			"post": {
+				"operationId": "populations_createcombo",
+				"summary": "Create combination populations",
+				"description": "Makes 2<sup>gids.length</sup> populations consisting of all combinations of the specified GIDs. For example, if the population specified by `parentPopulationId` is `{$and: [G1, G2]}` and `gids` is `[GA, GB]`, then the following will be created:\n\n* `{name: \"GA+ GB-\", gates: {$and: [G1, G2, GA], $not: GB}}`\n\n* `{name: \"GA+ GB+\", gates: {$and: [G1, G2, GA, GB]}}`\n\n* `{name: \"GA- GB-\", gates: {$and: [G1, G2], $not: [GA, GB]}}`\n\n* `{name: \"GA- GB+\", gates: {$and: [G1, G2, GB], $not: GA}}`",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"parentPopulationId": {
+										"type": "string",
+										"description": "Population below which to create new populations.",
+										"pattern": "^[0-9a-f]{24}$",
+										"nullable": true
+									},
+									"gids": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										"minLength": 1,
+										"maxLength": 12,
+										"description": "Gate GIDs to make combinations of."
+									}
+								}
+							}
+						}
+					},
+					"required": true
+				},
+				"responses": {
+					"200": {
+						"description": "List of populations created.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/Population"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/scalesets": {
+			"get": {
+				"operationId": "scalesets_list",
+				"summary": "List scale sets in an experiment",
+				"description": "Gets the list of scale sets in the experiment. Currently there is exactly one scale set per experiment.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the scale set belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "List of ScaleSets.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/ScaleSet"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/scalesets/{scaleSetId}": {
+			"get": {
+				"operationId": "scalesets_read",
+				"summary": "Get a scale set by ID",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the scale set belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "scaleSetId",
+						"in": "path",
+						"description": "ID of the scale set.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "ScaleSet details.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ScaleSet"
+								}
+							}
+						}
+					}
+				}
+			},
+			"patch": {
+				"operationId": "scalesets_update",
+				"summary": "Update a scale set",
+				"description": "Modifies the scale set. Changing a scale will also adjust the coordinates of gates using the modified scale.",
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment to which the scale set belongs.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					},
+					{
+						"name": "scaleSetId",
+						"in": "path",
+						"description": "ID of the scale set.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ScaleSet"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "ScaleSet description after update and modified gates.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"gates": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/Gate"
+											}
+										},
+										"scaleSet": {
+											"$ref": "#/components/schemas/ScaleSet"
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/experiments/{experimentId}/bulkstatistics": {
+			"post": {
+				"operationId": "statistics",
+				"summary": "Get statistics",
+				"description": "Calculates statistics for combinations of FCS files, populations and channels.",
+				"externalDocs": {
+					"description": "CellEngine API documentation for statistics.",
+					"url": "https://docs.cellengine.com/api/#statistics"
+				},
+				"parameters": [
+					{
+						"name": "experimentId",
+						"in": "path",
+						"description": "ID of the experiment.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"statistics": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"enum": [
+												"mean",
+												"median",
+												"quantile",
+												"mad",
+												"geometricMean",
+												"eventCount",
+												"eventCountPerUl",
+												"cv",
+												"stddev",
+												"percent"
+											]
+										},
+										"description": "Statistics to calculate. \"mad\" stands for median absolute deviation."
+									},
+									"q": {
+										"type": "number",
+										"minimum": 0,
+										"maximum": 1,
+										"description": "*for quantile statistic* Only a single quantile may be fetched per request.",
+										"nullable": true
+									},
+									"channels": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										},
+										"description": "*for \"mean\", \"median\", \"geometricMean\", \"cv\", \"stddev\", \"mad\" or \"quantile\" statistics* Names of channels to calculate statistics for.",
+										"nullable": true
+									},
+									"compensationId": {
+										"oneOf": [
+											{
+												"type": "string",
+												"pattern": "^[0-9a-f]{24}$"
+											},
+											{
+												"type": "integer",
+												"enum": [
+													0,
+													-1,
+													-2
+												]
+											}
+										],
+										"description": "Compensation to use for gating and statistic calculation. See [special compensation values](#special-values)."
+									},
+									"annotations": {
+										"type": "boolean",
+										"default": false,
+										"description": "Include file annotations in output.",
+										"nullable": true
+									},
+									"digits": {
+										"type": "integer",
+										"minimum": 0,
+										"maximum": 20,
+										"description": "Number of digits to appear after the decimal point. (TSV and CSV format only.)",
+										"nullable": true
+									},
+									"fcsFileIds": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										"description": "FCS files to get statistics for. If omitted, statistics for all non-control FCS files will be returned.",
+										"nullable": true
+									},
+									"format": {
+										"type": "string",
+										"enum": [
+											"TSV (with header)",
+											"TSV (without header)",
+											"CSV (with header)",
+											"CSV (without header)",
+											"json"
+										],
+										"default": "json",
+										"description": "The encoding.",
+										"nullable": true
+									},
+									"ids": {
+										"type": "boolean",
+										"default": true,
+										"description": "Include population and file IDs in output.",
+										"nullable": true
+									},
+									"layout": {
+										"type": "string",
+										"enum": [
+											"tall-skinny",
+											"medium",
+											"short-wide"
+										],
+										"description": "The file (TSV/CSV) or object (JSON) layout. <ul><li>`\"tall-skinny\"` One row/object per combination of FCS file, population, statistic and channel.</li><li>`\"medium\"` One row/object per combination of FCS file, population and channel. Separate column/property for each statistic.</li><li>`\"short-wide\"` One row/object per FCS file. One column/property per combination of population, statistic and channel. This format is not readily machine-readable and does not include population IDs or the `uniquePopulationName`.</li></ul>Case-insensitive.",
+										"nullable": true
+									},
+									"percentOf": {
+										"oneOf": [
+											{
+												"type": "string",
+												"pattern": "^[0-9a-f]{24}$"
+											},
+											{
+												"type": "array",
+												"items": {
+													"type": "string",
+													"pattern": "^[0-9a-f]{24}$"
+												}
+											}
+										],
+										"description": "Population ID or array of population IDs. If omitted or the string `\"PARENT\"`, will calculate percent of parent for each population. If a single ID, will calculate percent of that population for all populations specified by `populationIds`. If an array, will calculate percent of each of those populations.",
+										"nullable": true
+									},
+									"populationIds": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										"description": "List of population IDs. Defaults to ungated. For ungated, omit or use `null`.",
+										"nullable": true
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Statistics as JSON",
+						"content": {
+							"application/json": {
+								"schema": {
+									"oneOf": [
+										{
+											"description": "Tall-skinny layout.",
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"fcsFileId": {
+														"type": "string",
+														"pattern": "^[0-9a-f]{24}$"
+													},
+													"filename": {
+														"type": "string",
+														"example": "Specimen_1.fcs"
+													},
+													"populationId": {
+														"type": "string",
+														"nullable": true,
+														"pattern": "^[0-9a-f]{24}$"
+													},
+													"population": {
+														"type": "string",
+														"example": "CD3+ T cells"
+													},
+													"uniquePopulationName": {
+														"type": "string"
+													},
+													"parentPopulationId": {
+														"type": "string",
+														"nullable": true,
+														"pattern": "^[0-9a-f]{24}$"
+													},
+													"parentPopulation": {
+														"type": "string",
+														"example": "Singlets"
+													},
+													"annotations": {
+														"type": "object",
+														"additionalProperties": {
+															"type": "string"
+														}
+													},
+													"channel": {
+														"type": "string",
+														"example": "Ax488-A"
+													},
+													"reagent": {
+														"type": "string",
+														"nullable": true,
+														"example": "CD3"
+													},
+													"statistic": {
+														"type": "string",
+														"example": "median"
+													},
+													"value": {
+														"type": "number",
+														"nullable": true
+													}
+												}
+											}
+										},
+										{
+											"description": "Medium layout.",
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"fcsFileId": {
+														"type": "string",
+														"pattern": "^[0-9a-f]{24}$"
+													},
+													"filename": {
+														"type": "string"
+													},
+													"populationId": {
+														"type": "string",
+														"nullable": true,
+														"pattern": "^[0-9a-f]{24}$"
+													},
+													"population": {
+														"type": "string"
+													},
+													"uniquePopulationName": {
+														"type": "string"
+													},
+													"parentPopulationId": {
+														"type": "string",
+														"nullable": true,
+														"pattern": "^[0-9a-f]{24}$"
+													},
+													"parentPopulation": {
+														"type": "string",
+														"example": "Singlets"
+													},
+													"annotations": {
+														"type": "object",
+														"additionalProperties": {
+															"type": "string"
+														}
+													},
+													"channel": {
+														"type": "string",
+														"example": "Ax488-A"
+													},
+													"reagent": {
+														"type": "string",
+														"nullable": true,
+														"example": "CD3"
+													},
+													"mean": {
+														"type": "number",
+														"nullable": true
+													},
+													"median": {
+														"type": "number",
+														"nullable": true
+													},
+													"quantile": {
+														"type": "number",
+														"nullable": true
+													},
+													"mad": {
+														"type": "number",
+														"nullable": true
+													},
+													"geometricMean": {
+														"type": "number",
+														"nullable": true
+													},
+													"eventCount": {
+														"type": "integer",
+														"nullable": true
+													},
+													"eventCountPerUl": {
+														"type": "number",
+														"nullable": true
+													},
+													"cv": {
+														"type": "number",
+														"nullable": true
+													},
+													"stddev": {
+														"type": "number",
+														"nullable": true
+													},
+													"percent": {
+														"type": "number",
+														"nullable": true
+													}
+												}
+											}
+										},
+										{
+											"description": "Short-wide layout.",
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"fcsFileId": {
+														"type": "string",
+														"pattern": "^[0-9a-f]{24}$"
+													},
+													"filename": {
+														"type": "string",
+														"example": "Specimen_1.fcs"
+													},
+													"annotations": {
+														"type": "object",
+														"additionalProperties": {
+															"type": "string"
+														}
+													},
+													"additionalProperties": {
+														"type": "number"
+													}
+												}
+											}
+										}
+									]
+								}
+							},
+							"text/csv": {
+								"schema": {
+									"type": "string",
+									"format": "binary"
+								}
+							},
+							"text/tab-separated-values": {
+								"schema": {
+									"type": "string",
+									"format": "binary"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/folders": {
+			"get": {
+				"operationId": "folders_list",
+				"summary": "List folders",
+				"description": "Lists folders.",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/limit"
+					},
+					{
+						"$ref": "#/components/parameters/skip"
+					},
+					{
+						"$ref": "#/components/parameters/fields"
+					},
+					{
+						"$ref": "#/components/parameters/query"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "List of folders.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"$ref": "#/components/schemas/Folder"
+									}
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"operationId": "folders_create",
+				"summary": "Create a folder",
+				"description": "Creates a folder.",
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string"
+									},
+									"path": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										"default": []
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Folder created.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Folder"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/folders/{folderId}": {
+			"get": {
+				"operationId": "folders_read",
+				"summary": "Get a folder by ID",
+				"description": "Get single folder by ID.",
+				"parameters": [
+					{
+						"name": "folderId",
+						"in": "path",
+						"description": "ID of the folder.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Folder details.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Folder"
+								}
+							}
+						}
+					}
+				}
+			},
+			"patch": {
+				"operationId": "folders_update",
+				"summary": "Update a folder",
+				"description": "Modifies the folder.",
+				"parameters": [
+					{
+						"name": "folderId",
+						"in": "path",
+						"description": "ID of the folder.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string",
+										"nullable": true
+									},
+									"path": {
+										"type": "array",
+										"items": {
+											"type": "string",
+											"pattern": "^[0-9a-f]{24}$"
+										},
+										"nullable": true
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Folder description after update.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Folder"
+								}
+							}
+						}
+					}
+				}
+			},
+			"delete": {
+				"operationId": "folders_delete",
+				"summary": "Soft-delete folder",
+				"description": "Marks the folder for deletion. It will be deleted permanently after approximately seven days.\n\nFolders containing revision experiments, locked experiments and experiments with an active `retentionPolicy` cannot be deleted.",
+				"parameters": [
+					{
+						"name": "folderId",
+						"in": "path",
+						"description": "ID of the folder.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Folder successfully deleted."
+					}
+				}
+			}
+		},
+		"/folders/{folderId}/testpermissions": {
+			"post": {
+				"operationId": "folders_testpermissions",
+				"summary": "Test folder permissions",
+				"description": "Checks which of the requested permissions the current user has on the folder, taking into account directly granted roles and inherited roles.",
+				"parameters": [
+					{
+						"name": "folderId",
+						"in": "path",
+						"description": "ID of the folder.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"permissions": {
+										"type": "array",
+										"items": {
+											"type": "string"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "List of permissions the user has.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"type": "string"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/folders/{folderId}/changepermissions": {
+			"post": {
+				"operationId": "folders_changepermissions",
+				"summary": "Change folder permissions",
+				"description": "Changes the permissions of the folder.",
+				"parameters": [
+					{
+						"name": "folderId",
+						"in": "path",
+						"description": "ID of the folder.",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"properties": {
+									"add": {
+										"type": "array",
+										"items": {
+											"type": "object",
+											"properties": {
+												"grantee": {
+													"type": "string",
+													"pattern": "^[0-9a-f]{24}$"
+												},
+												"role": {
+													"type": "string",
+													"pattern": "^[0-9a-f]{24}$"
+												}
+											}
+										}
+									},
+									"remove": {
+										"type": "array",
+										"items": {
+											"type": "object",
+											"properties": {
+												"grantee": {
+													"type": "string",
+													"pattern": "^[0-9a-f]{24}$"
+												},
+												"role": {
+													"type": "string",
+													"pattern": "^[0-9a-f]{24}$"
+												}
+											}
+										}
+									},
+									"message": {
+										"type": "string",
+										"description": "Message to include in the notification email sent to all users appearing as grantees in `add`."
+									}
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Folder description after update.",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/Folder"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/folders/{folderId}/undelete": {
+			"post": {
+				"operationId": "folders_undelete",
+				"summary": "Un-delete folder",
+				"description": "Un-deletes the soft-deleted folder.",
+				"parameters": [
+					{
+						"name": "folderId",
+						"in": "path",
+						"description": "ID of the folder.",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^[0-9a-f]{24}$"
+						}
+					}
+				],
+				"responses": {
+					"204": {
+						"description": "Folder successfully un-deleted."
+					}
+				}
+			}
+		}
+	},
+	"security": [
+		{
+			"personal_access_token": []
+		}
+	]
+}
